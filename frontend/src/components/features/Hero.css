@@ -1,0 +1,232 @@
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #2c5530 0%, #1e3a21 100%);
+  overflow: hidden;
+  padding-top: 80px;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+  background-image: url('https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=800&q=80');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.3;
+  z-index: 1;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(44, 85, 48, 0.1);
+  z-index: 1;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 3rem;
+  width: 60%;
+}
+
+.hero-title {
+  margin-bottom: 1.5rem;
+}
+
+.hero-brand {
+  display: block;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 600;
+  color: var(--accent-color);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 0.5rem;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.hero-title-main {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1.1;
+  display: block;
+}
+
+.hero-subtitle {
+  font-size: clamp(1.1rem, 2vw, 1.3rem);
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.hero-features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.feature {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--white);
+  font-weight: 500;
+}
+
+.feature svg {
+  color: var(--accent-color);
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn-primary-hero {
+  background-color: var(--accent-color);
+  color: var(--text-dark);
+  padding: 1rem 2rem;
+  border-radius: var(--border-radius);
+  text-decoration: none;
+  font-weight: 600;
+  transition: var(--transition);
+  display: inline-block;
+}
+
+.btn-primary-hero:hover {
+  background-color: #b8941f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+}
+
+.btn-secondary-hero {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--white);
+  padding: 1rem 2rem;
+  border-radius: var(--border-radius);
+  text-decoration: none;
+  font-weight: 500;
+  transition: var(--transition);
+  backdrop-filter: blur(10px);
+}
+
+.btn-secondary-hero:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.hero-images {
+  position: relative;
+  z-index: 2;
+}
+
+.image-container {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.hero-image {
+  width: 100%;
+  height: 500px;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.image-container:hover .hero-image {
+  transform: scale(1.05);
+}
+
+.hero-decoration {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.decoration-element {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: rgba(212, 175, 55, 0.1);
+  animation: float 6s ease-in-out infinite;
+}
+
+.decoration-element:nth-child(1) {
+  top: 10%;
+  right: 10%;
+  animation-delay: 0s;
+}
+
+.decoration-element:nth-child(2) {
+  bottom: 20%;
+  left: 5%;
+  animation-delay: 2s;
+}
+
+.decoration-element:nth-child(3) {
+  top: 50%;
+  right: 5%;
+  width: 100px;
+  height: 100px;
+  animation-delay: 4s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .hero::before {
+    width: 100%;
+    opacity: 0.2;
+  }
+  
+  .hero-content {
+    width: 100%;
+    text-align: center;
+    padding: 0 1.5rem;
+  }
+
+  .hero-features {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    justify-items: center;
+  }
+
+  .hero-buttons {
+    justify-content: center;
+  }
+
+  .btn-primary-hero,
+  .btn-secondary-hero {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+  }
+}

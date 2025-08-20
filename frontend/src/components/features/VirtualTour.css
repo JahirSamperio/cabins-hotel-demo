@@ -1,0 +1,154 @@
+.virtual-tour {
+  background-color: var(--bg-light);
+}
+
+.tour-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  margin-top: 3rem;
+}
+
+.tour-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tour-placeholder {
+  background: var(--white);
+  padding: 3rem;
+  border-radius: var(--border-radius);
+  text-align: center;
+  box-shadow: var(--shadow);
+  width: 100%;
+  max-width: 400px;
+}
+
+.tour-placeholder svg {
+  color: var(--primary-color);
+  margin-bottom: 1.5rem;
+}
+
+.tour-placeholder h3 {
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
+.tour-placeholder p {
+  color: var(--text-light);
+  margin-bottom: 0.5rem;
+}
+
+.btn-tour {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--primary-color);
+  color: var(--white);
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: var(--transition);
+  margin: 2rem auto 0;
+  font-weight: 600;
+}
+
+.btn-tour:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.tour-preview h3 {
+  color: var(--primary-color);
+  margin-bottom: 2rem;
+}
+
+.preview-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.preview-card {
+  background: var(--white);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: var(--transition);
+}
+
+.preview-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.preview-image {
+  position: relative;
+  height: 150px;
+  overflow: hidden;
+}
+
+.preview-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(44, 85, 48, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: var(--transition);
+  color: var(--white);
+}
+
+.preview-card:hover .preview-overlay {
+  opacity: 1;
+}
+
+.preview-info {
+  padding: 1.5rem;
+}
+
+.preview-info h4 {
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+}
+
+.preview-info p {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .tour-content {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .tour-placeholder {
+    padding: 2rem;
+  }
+  
+  .preview-grid {
+    gap: 1rem;
+  }
+  
+  .preview-image {
+    height: 120px;
+  }
+  
+  .preview-info {
+    padding: 1rem;
+  }
+}
