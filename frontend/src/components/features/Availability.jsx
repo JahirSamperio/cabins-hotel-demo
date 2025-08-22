@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useLazyLoad } from '../../hooks/useLazyLoad'
+import { checkAvailability } from '../../services/availabilityService'
+import Swal from 'sweetalert2'
 import './Availability.css'
 
 const Availability = () => {
@@ -8,7 +10,9 @@ const Availability = () => {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDates, setSelectedDates] = useState({ checkIn: null, checkOut: null })
   const [guests, setGuests] = useState(2)
-  const [cabin, setCabin] = useState('')
+  const [availableCabins, setAvailableCabins] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [showResults, setShowResults] = useState(false)
 
   const occupiedDates = [
     '2024-12-25', '2024-12-26', '2024-12-31', '2025-01-01',
@@ -77,12 +81,62 @@ const Availability = () => {
     setCurrentDate(newDate)
   }
 
-  const handleConsultar = () => {
-    if (selectedDates.checkIn && selectedDates.checkOut) {
-      const nights = Math.ceil((new Date(selectedDates.checkOut) - new Date(selectedDates.checkIn)) / (1000 * 60 * 60 * 24))
-      alert(`Consulta: ${selectedDates.checkIn} a ${selectedDates.checkOut} (${nights} noches) para ${guests} huéspedes`)
-    } else {
+  const handleConsultar = async () => {
+    if (!selectedDates.checkIn || !selectedDates.checkOut) {
       alert('Por favor selecciona fechas de entrada y salida')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const data = await checkAvailability(selectedDates.checkIn, selectedDates.checkOut, guests)
+      
+      if (data.ok) {
+        setAvailableCabins(data.cabins)
+        setShowResults(true)
+        if (data.cabins.length === 0) {
+          Swal.fire({
+            title: 'Sin Disponibilidad',
+            text: 'No hay cabañas disponibles para las fechas seleccionadas',
+            icon: 'info',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#2c5530'
+          })
+        } else {
+          Swal.fire({
+            title: '¡Excelente!',
+            text: `Encontramos ${data.cabins.length} cabaña${data.cabins.length > 1 ? 's' : ''} disponible${data.cabins.length > 1 ? 's' : ''} para tus fechas`,
+            icon: 'success',
+            showCancelButton: true,
+            confirmButtonText: 'Reservar Ahora',
+            cancelButtonText: 'Ver Opciones',
+            confirmButtonColor: '#e67e22',
+            cancelButtonColor: '#6c757d'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              window.location.href = '/dashboard'
+            }
+          })
+        }
+      } else {
+        Swal.fire({
+          title: 'Error',
+          text: data.msg,
+          icon: 'error',
+          confirmButtonText: 'Cerrar',
+          confirmButtonColor: '#c62828'
+        })
+      }
+    } catch (error) {
+      Swal.fire({
+        title: 'Error de Conexión',
+        text: error.message || 'Error al consultar disponibilidad',
+        icon: 'error',
+        confirmButtonText: 'Reintentar',
+        confirmButtonColor: '#c62828'
+      })
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -123,7 +177,7 @@ const Availability = () => {
                 
                 <div className="calendar-days">
                   {getDaysInMonth(currentDate).map((day, index) => {
-                    if (!day) return <div key={index} className="empty-day"></div>
+                    if (!day) return <div key={`empty-${index}`} className="empty-day"></div>
                     
                     const year = currentDate.getFullYear()
                     const month = currentDate.getMonth()
@@ -134,7 +188,7 @@ const Availability = () => {
                     
                     return (
                       <div
-                        key={day}
+                        key={`${year}-${month}-${day}`}
                         className={`calendar-day ${
                           isOccupied ? 'occupied' : 'available'
                         } ${
@@ -200,15 +254,7 @@ const Availability = () => {
                 </select>
               </div>
               
-              <div className="form-group">
-                <label>Tipo de cabaña (opcional)</label>
-                <select value={cabin} onChange={(e) => setCabin(e.target.value)}>
-                  <option value="">Cualquier cabaña</option>
-                  <option value="familiar">Cabaña Familiar</option>
-                  <option value="romantica">Cabaña Romántica</option>
-                  <option value="premium">Cabaña Premium</option>
-                </select>
-              </div>
+
               
               {selectedDates.checkIn && selectedDates.checkOut && (
                 <div className="booking-summary">
@@ -222,11 +268,32 @@ const Availability = () => {
               <button 
                 className="btn-consultar" 
                 onClick={handleConsultar}
-                disabled={!selectedDates.checkIn || !selectedDates.checkOut}
+                disabled={!selectedDates.checkIn || !selectedDates.checkOut || loading}
               >
-                Consultar Disponibilidad
+                {loading ? 'Consultando...' : 'Consultar Disponibilidad'}
               </button>
             </div>
+            
+            {showResults && (
+              <div className="availability-results">
+                <h3>Cabañas Disponibles ({availableCabins.length})</h3>
+                {availableCabins.length === 0 ? (
+                  <p>No hay cabañas disponibles para las fechas seleccionadas.</p>
+                ) : (
+                  <div className="cabins-grid">
+                    {availableCabins.map(cabin => (
+                      <div key={cabin.id} className="cabin-card">
+                        <h4>{cabin.name}</h4>
+                        <p><strong>Capacidad:</strong> {cabin.capacity} personas</p>
+                        <p><strong>Precio:</strong> ${cabin.price_per_night}/noche</p>
+                        <p>{cabin.description}</p>
+                        <button className="btn-reservar">Reservar</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

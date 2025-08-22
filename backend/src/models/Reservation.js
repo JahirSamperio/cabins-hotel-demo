@@ -74,6 +74,11 @@ const Reservation = conexion.define('reservations', {
     special_requests: {
         type: DataTypes.TEXT,
         allowNull: true
+    },
+    amount_paid: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0.00,
+        allowNull: false
     }
 }, {
     timestamps: true,

@@ -5,10 +5,11 @@ import WhatsAppButton from './components/ui/WhatsAppButton'
 import './styles/App.css'
 
 // Lazy loading para páginas
-const HomePage = lazy(() => import('./pages/HomePage'))
-const LoginPage = lazy(() => import('./pages/LoginPage'))
-const UserDashboard = lazy(() => import('./pages/UserDashboard'))
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const HomePage = lazy(() => import('./pages/Home'))
+const LoginPage = lazy(() => import('./pages/Login'))
+const RegisterPage = lazy(() => import('./pages/Register'))
+const UserDashboard = lazy(() => import('./pages/Dashboard'))
+const AdminDashboard = lazy(() => import('./pages/Admin'))
 
 // Loading component
 const LoadingSpinner = () => (
@@ -27,6 +28,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
             <Route path="/dashboard" element={<UserDashboard />} />
             <Route path="/admin" element={<AdminDashboard />} />
           </Routes>

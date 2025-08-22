@@ -2,6 +2,10 @@ import { crearReservacionService, obtenerReservacionesService, obtenerReservacio
 
 export const crearReservacion = async (req, res) => {
     try {
+        console.log('Headers:', req.headers)
+        console.log('Body:', req.body)
+        console.log('User ID:', req.id)
+        
         const { cabin_id, check_in, check_out, guests, special_requests } = req.body;
         const user_id = req.id;
 
@@ -14,6 +18,7 @@ export const crearReservacion = async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Error en crearReservacion:', error)
         res.status(500).json({
             ok: false,
             msg: "Error en el servidor"
@@ -46,13 +51,23 @@ export const obtenerReservaciones = async (req, res) => {
     try {
         const user_id = req.id;
         const is_admin = req.is_admin;
+        const { page = 1, limit = 10, status: statusFilter, payment_status, booking_type, date, date_range } = req.query;
+        
+        const filters = {
+            status: statusFilter,
+            payment_status,
+            booking_type,
+            date,
+            date_range
+        };
 
-        const { status, ok, msg, reservations } = await obtenerReservacionesService(user_id, is_admin);
+        const { status, ok, msg, reservations, pagination } = await obtenerReservacionesService(user_id, is_admin, page, limit, filters);
 
         res.status(status).json({
             ok,
             msg,
-            reservations
+            reservations,
+            pagination
         });
 
     } catch (error) {

@@ -1,6 +1,7 @@
 import Reservation from "../models/Reservation.js";
 import Cabin from "../models/Cabin.js";
 import User from "../models/User.js";
+import { Op } from "sequelize";
 
 export const crearReservacionService = async (user_id, cabin_id, check_in, check_out, guests, special_requests) => {
     try {
@@ -11,6 +12,48 @@ export const crearReservacionService = async (user_id, cabin_id, check_in, check
                 ok: false,
                 status: 404,
                 msg: "Cabaña no encontrada"
+            };
+        }
+
+        // Verificar disponibilidad de fechas
+        const conflictingReservation = await Reservation.findOne({
+            where: {
+                cabin_id,
+                status: ['pending', 'confirmed'],
+                [Op.or]: [
+                    {
+                        check_in: {
+                            [Op.between]: [check_in, check_out]
+                        }
+                    },
+                    {
+                        check_out: {
+                            [Op.between]: [check_in, check_out]
+                        }
+                    },
+                    {
+                        [Op.and]: [
+                            {
+                                check_in: {
+                                    [Op.lte]: check_in
+                                }
+                            },
+                            {
+                                check_out: {
+                                    [Op.gte]: check_out
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        if (conflictingReservation) {
+            return {
+                ok: false,
+                status: 400,
+                msg: "La cabaña no está disponible en las fechas seleccionadas"
             };
         }
 
@@ -60,11 +103,53 @@ export const crearReservacionWalkInService = async (cabin_id, check_in, check_ou
             };
         }
 
+        // Verificar disponibilidad de fechas
+        const conflictingReservation = await Reservation.findOne({
+            where: {
+                cabin_id,
+                status: ['pending', 'confirmed'],
+                [Op.or]: [
+                    {
+                        check_in: {
+                            [Op.between]: [check_in, check_out]
+                        }
+                    },
+                    {
+                        check_out: {
+                            [Op.between]: [check_in, check_out]
+                        }
+                    },
+                    {
+                        [Op.and]: [
+                            {
+                                check_in: {
+                                    [Op.lte]: check_in
+                                }
+                            },
+                            {
+                                check_out: {
+                                    [Op.gte]: check_out
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        if (conflictingReservation) {
+            return {
+                ok: false,
+                status: 400,
+                msg: "La cabaña no está disponible en las fechas seleccionadas"
+            };
+        }
+
         const nights = Math.ceil((new Date(check_out) - new Date(check_in)) / (1000 * 60 * 60 * 24));
         const total_price = nights * cabin.price_per_night;
 
         const reservation = await Reservation.create({
-            user_id: 'guest-user-uuid', // Usuario invitado
+            user_id: '00000000-0000-0000-0000-000000000001', // Usuario invitado
             cabin_id,
             check_in,
             check_out,
@@ -96,7 +181,7 @@ export const crearReservacionWalkInService = async (cabin_id, check_in, check_ou
     }
 };
 
-export const obtenerReservacionesService = async (user_id, is_admin) => {
+export const obtenerReservacionesService = async (user_id, is_admin, page = 1, limit = 10, filters = {}) => {
     try {
         let whereClause = {};
         
@@ -104,22 +189,89 @@ export const obtenerReservacionesService = async (user_id, is_admin) => {
             whereClause.user_id = user_id;
         }
 
-        const reservations = await Reservation.findAll({
+        // Aplicar filtros
+        if (filters.status) {
+            whereClause.status = filters.status;
+        }
+        
+        if (filters.payment_status) {
+            whereClause.payment_status = filters.payment_status;
+        }
+        
+        if (filters.booking_type) {
+            whereClause.booking_type = filters.booking_type;
+        }
+        
+        if (filters.date) {
+            whereClause[Op.or] = [
+                {
+                    check_in: {
+                        [Op.lte]: filters.date
+                    },
+                    check_out: {
+                        [Op.gte]: filters.date
+                    }
+                },
+                {
+                    check_in: filters.date
+                },
+                {
+                    check_out: filters.date
+                }
+            ];
+        }
+        
+        if (filters.date_range === 'week') {
+            const today = new Date();
+            const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+            whereClause.check_in = {
+                [Op.between]: [today.toISOString().split('T')[0], weekFromNow.toISOString().split('T')[0]]
+            };
+        }
+        
+        if (filters.date_range === 'month') {
+            const today = new Date();
+            const monthFromNow = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
+            whereClause.check_in = {
+                [Op.between]: [today.toISOString().split('T')[0], monthFromNow.toISOString().split('T')[0]]
+            };
+        }
+
+        const offset = (page - 1) * limit;
+
+        const { count, rows: reservations } = await Reservation.findAndCountAll({
             where: whereClause,
             include: [
                 {
                     model: Cabin,
                     attributes: ['name', 'capacity']
+                },
+                {
+                    model: User,
+                    attributes: ['name'],
+                    required: false
                 }
             ],
-            order: [['created_at', 'DESC']]
+            order: [['created_at', 'DESC']],
+            limit: parseInt(limit),
+            offset: parseInt(offset)
         });
+
+        const totalPages = Math.ceil(count / limit);
 
         return {
             ok: true,
             status: 200,
             msg: "Reservaciones obtenidas exitosamente",
-            reservations
+            reservations,
+            pagination: {
+                currentPage: parseInt(page),
+                totalPages,
+                totalItems: count,
+                itemsPerPage: parseInt(limit),
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            }
         };
 
     } catch (error) {
@@ -195,13 +347,112 @@ export const actualizarReservacionService = async (id, updateData, user_id, is_a
             };
         }
 
+        // Lógica especial para pagos
+        if (updateData.amount_paid !== undefined) {
+            const amountPaid = parseFloat(updateData.amount_paid);
+            const totalPrice = parseFloat(reservation.total_price);
+            
+            console.log('Payment logic - Amount:', amountPaid, 'Total:', totalPrice);
+            
+            // Validar monto
+            if (amountPaid < 0) {
+                return {
+                    ok: false,
+                    status: 400,
+                    msg: "El monto pagado no puede ser negativo"
+                };
+            }
+            
+            if (amountPaid > totalPrice) {
+                return {
+                    ok: false,
+                    status: 400,
+                    msg: "El monto pagado no puede ser mayor al total"
+                };
+            }
+            
+            // Auto-actualizar payment_status basado en amount_paid
+            if (amountPaid === 0) {
+                updateData.payment_status = 'pending';
+            } else if (amountPaid >= totalPrice) {
+                updateData.payment_status = 'paid';
+            } else {
+                updateData.payment_status = 'partial';
+            }
+            
+            console.log('New payment status:', updateData.payment_status);
+        }
+
+        // Si se están actualizando fechas, verificar disponibilidad
+        if (updateData.check_in || updateData.check_out) {
+            const newCheckIn = updateData.check_in || reservation.check_in;
+            const newCheckOut = updateData.check_out || reservation.check_out;
+            
+            const conflictingReservation = await Reservation.findOne({
+                where: {
+                    id: { [Op.ne]: id }, // Excluir la reservación actual
+                    cabin_id: reservation.cabin_id,
+                    status: ['pending', 'confirmed'],
+                    [Op.or]: [
+                        {
+                            check_in: {
+                                [Op.between]: [newCheckIn, newCheckOut]
+                            }
+                        },
+                        {
+                            check_out: {
+                                [Op.between]: [newCheckIn, newCheckOut]
+                            }
+                        },
+                        {
+                            [Op.and]: [
+                                {
+                                    check_in: {
+                                        [Op.lte]: newCheckIn
+                                    }
+                                },
+                                {
+                                    check_out: {
+                                        [Op.gte]: newCheckOut
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            });
+
+            if (conflictingReservation) {
+                return {
+                    ok: false,
+                    status: 400,
+                    msg: "La cabaña no está disponible en las fechas seleccionadas"
+                };
+            }
+        }
+
         await reservation.update(updateData);
+        
+        // Recargar la reservación actualizada para devolver los datos más recientes
+        const updatedReservation = await Reservation.findByPk(id, {
+            include: [
+                {
+                    model: Cabin,
+                    attributes: ['name', 'capacity']
+                },
+                {
+                    model: User,
+                    attributes: ['name'],
+                    required: false
+                }
+            ]
+        });
 
         return {
             ok: true,
             status: 200,
             msg: "Reservación actualizada exitosamente",
-            reservation
+            reservation: updatedReservation
         };
 
     } catch (error) {
