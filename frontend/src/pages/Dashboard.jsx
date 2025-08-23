@@ -17,7 +17,8 @@ const Dashboard = () => {
     check_in: '',
     check_out: '',
     guests: 2,
-    special_requests: ''
+    special_requests: '',
+    includes_breakfast: false
   })
   const navigate = useNavigate()
 
@@ -92,7 +93,8 @@ const Dashboard = () => {
       check_in: '',
       check_out: '',
       guests: 2,
-      special_requests: ''
+      special_requests: '',
+      includes_breakfast: false
     })
   }
 
@@ -109,10 +111,10 @@ const Dashboard = () => {
 
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
+    const { name, value, type, checked } = e.target
     setReservationData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }))
   }
 
@@ -412,6 +414,18 @@ const Dashboard = () => {
                   />
                 </div>
                 
+                <div className="form-group">
+                  <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                    <input
+                      type="checkbox"
+                      name="includes_breakfast"
+                      checked={reservationData.includes_breakfast}
+                      onChange={handleInputChange}
+                    />
+                    Incluir servicio de desayunador (+$150 por persona por noche)
+                  </label>
+                </div>
+                
                 <div className="form-actions">
                   <button type="button" className="btn-secondary" onClick={handleCloseModal}>
                     Cancelar
@@ -473,6 +487,16 @@ const Dashboard = () => {
                       <label>Monto Pagado:</label>
                       <span className="price">${selectedReservation.amount_paid || 0}</span>
                     </div>
+                    <div className="detail-item">
+                      <label>Desayunador:</label>
+                      <span>{selectedReservation.includes_breakfast ? 'Incluido' : 'No incluido'}</span>
+                    </div>
+                    {selectedReservation.special_requests && (
+                      <div className="detail-item">
+                        <label>Solicitudes especiales:</label>
+                        <span>{selectedReservation.special_requests}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 

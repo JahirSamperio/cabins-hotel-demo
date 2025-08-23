@@ -79,6 +79,11 @@ const Reservation = conexion.define('reservations', {
         type: DataTypes.DECIMAL(10, 2),
         defaultValue: 0.00,
         allowNull: false
+    },
+    includes_breakfast: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        allowNull: false
     }
 }, {
     timestamps: true,

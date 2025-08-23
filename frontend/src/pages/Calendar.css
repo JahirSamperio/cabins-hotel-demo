@@ -1,0 +1,395 @@
+/* Calendar View */
+.calendar-view {
+  background: #ffffff;
+  border-radius: 16px;
+  overflow-x: auto;
+  box-shadow: 0 4px 20px rgba(44, 85, 48, 0.1);
+  border: 1px solid rgba(44, 85, 48, 0.05);
+  padding-right: 1px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: 150px repeat(var(--date-columns, 18), minmax(80px, 1fr));
+  gap: 1px;
+  background: #e0e0e0;
+  width: 100%;
+}
+
+.calendar-header {
+  display: contents;
+}
+
+.cabin-header {
+  background: #2c5530;
+  color: #ffffff;
+  padding: 1rem 0.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.date-header {
+  background: #2c5530;
+  color: #ffffff;
+  padding: 0.5rem;
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+.date-day {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.date-month {
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.calendar-row {
+  display: contents;
+}
+
+.cabin-name {
+  background: #f8f9fa;
+  padding: 0.75rem 0.5rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  border-right: 2px solid #e0e0e0;
+}
+
+.calendar-cell {
+  background: #ffffff;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.calendar-cell.occupied {
+  background: #ffecb3;
+}
+
+.calendar-cell.single-day.status-confirmed {
+  border: 3px solid #28a745 !important;
+  border-radius: 8px;
+}
+
+.calendar-cell.range-start.status-confirmed {
+  border-left: 3px solid #28a745;
+  border-top: 3px solid #28a745;
+  border-bottom: 3px solid #28a745;
+  border-radius: 8px 0 0 8px;
+}
+
+.calendar-cell.range-middle.status-confirmed {
+  border-top: 3px solid #28a745;
+  border-bottom: 3px solid #28a745;
+  border-radius: 0;
+}
+
+.calendar-cell.range-end.status-confirmed {
+  border-right: 3px solid #28a745;
+  border-top: 3px solid #28a745;
+  border-bottom: 3px solid #28a745;
+  border-radius: 0 8px 8px 0;
+}
+
+.calendar-cell.single-day.status-pending {
+  border: 3px solid #ffc107 !important;
+  border-radius: 8px;
+}
+
+.calendar-cell.range-start.status-pending {
+  border-left: 3px solid #ffc107;
+  border-top: 3px solid #ffc107;
+  border-bottom: 3px solid #ffc107;
+  border-radius: 8px 0 0 8px;
+}
+
+.calendar-cell.range-middle.status-pending {
+  border-top: 3px solid #ffc107;
+  border-bottom: 3px solid #ffc107;
+  border-radius: 0;
+}
+
+.calendar-cell.range-end.status-pending {
+  border-right: 3px solid #ffc107;
+  border-top: 3px solid #ffc107;
+  border-bottom: 3px solid #ffc107;
+  border-radius: 0 8px 8px 0;
+}
+
+.calendar-cell.single-day.status-cancelled {
+  border: 3px solid #dc3545 !important;
+  border-radius: 8px;
+}
+
+.calendar-cell.range-start.status-cancelled {
+  border-left: 3px solid #dc3545;
+  border-top: 3px solid #dc3545;
+  border-bottom: 3px solid #dc3545;
+  border-radius: 8px 0 0 8px;
+}
+
+.calendar-cell.range-middle.status-cancelled {
+  border-top: 3px solid #dc3545;
+  border-bottom: 3px solid #dc3545;
+  border-radius: 0;
+}
+
+.calendar-cell.range-end.status-cancelled {
+  border-right: 3px solid #dc3545;
+  border-top: 3px solid #dc3545;
+  border-bottom: 3px solid #dc3545;
+  border-radius: 0 8px 8px 0;
+}
+
+.calendar-cell.single-day {
+  border: 3px solid #6c757d !important;
+  border-radius: 8px;
+}
+
+.calendar-cell.range-start {
+  border-left: 3px solid #6c757d;
+  border-top: 3px solid #6c757d;
+  border-bottom: 3px solid #6c757d;
+  border-radius: 8px 0 0 8px;
+}
+
+.calendar-cell.range-middle {
+  border-top: 3px solid #6c757d;
+  border-bottom: 3px solid #6c757d;
+  border-radius: 0;
+}
+
+.calendar-cell.range-end {
+  border-right: 3px solid #6c757d;
+  border-top: 3px solid #6c757d;
+  border-bottom: 3px solid #6c757d;
+  border-radius: 0 8px 8px 0;
+}
+
+.calendar-cell.available {
+  background: #e8f5e8;
+}
+
+.calendar-cell.today {
+  box-shadow: inset 0 0 0 2px #d4af37;
+}
+
+.reservation-info {
+  text-align: center;
+  font-size: 0.7rem;
+  padding: 0.25rem;
+}
+
+.guest-name {
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+
+.reservation-dates {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: #666;
+}
+
+.payment-amount {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: #2c5530;
+  margin-top: 0.1rem;
+}
+
+.add-reservation-btn {
+  background: transparent;
+  border: 1px solid rgba(44, 85, 48, 0.3);
+  color: rgba(44, 85, 48, 0.6);
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: normal;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-reservation-btn:hover {
+  background: rgba(44, 85, 48, 0.05);
+  color: #2c5530;
+  border-color: rgba(44, 85, 48, 0.5);
+}
+
+.calendar-cell.drag-selected {
+  background: rgba(44, 85, 48, 0.2) !important;
+  border: 2px solid #2c5530 !important;
+}
+
+.calendar-cell {
+  touch-action: none;
+}
+
+.reservation-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.section {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.section h4 {
+  margin: 0 0 1rem 0;
+  color: #2c5530;
+  font-size: 1rem;
+  font-weight: 600;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 0.5rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.info-row:not(:last-child) {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.label {
+  font-weight: 500;
+  color: #666;
+}
+
+.value {
+  font-weight: 600;
+  color: #333;
+}
+
+.value.price {
+  color: #2c5530;
+  font-size: 1.1rem;
+}
+
+.status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status.confirmed {
+  background: #e8f5e8;
+  color: #2c5530;
+}
+
+.status.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status.cancelled {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status.paid {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status.partial {
+  background: #fff3cd;
+  color: #856404;
+}
+
+@media (max-width: 1200px) {
+  .calendar-grid {
+    grid-template-columns: 120px repeat(var(--date-columns, 18), 70px);
+    width: auto;
+  }
+  
+  .calendar-view {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .calendar-view::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .reservation-info {
+    font-size: 0.6rem;
+  }
+  
+  .guest-name {
+    font-size: 0.55rem;
+  }
+  
+  .reservation-dates,
+  .payment-amount {
+    font-size: 0.5rem;
+  }
+  
+  .add-reservation-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 0.8rem;
+  }
+}
+/* Existing calendar styles... */
+
+/* Payment status dots */
+.payment-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+}
+
+.payment-dot.payment-pending {
+  background: #f57c00;
+}
+
+.payment-dot.payment-partial {
+  background: #1976d2;
+}
+
+.payment-dot.payment-paid {
+  background: #388e3c;
+}
+
+/* Payment legend */
+.payment-legend {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}

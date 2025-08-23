@@ -3,7 +3,7 @@ import Cabin from "../models/Cabin.js";
 import User from "../models/User.js";
 import { Op } from "sequelize";
 
-export const crearReservacionService = async (user_id, cabin_id, check_in, check_out, guests, special_requests) => {
+export const crearReservacionService = async (user_id, cabin_id, check_in, check_out, guests, special_requests, includes_breakfast = false) => {
     try {
         // Verificar que la cabaña existe
         const cabin = await Cabin.findByPk(cabin_id);
@@ -59,7 +59,9 @@ export const crearReservacionService = async (user_id, cabin_id, check_in, check
 
         // Calcular precio total
         const nights = Math.ceil((new Date(check_out) - new Date(check_in)) / (1000 * 60 * 60 * 24));
-        const total_price = nights * cabin.price_per_night;
+        const basePrice = nights * cabin.price_per_night;
+        const breakfastPrice = includes_breakfast ? (guests * nights * 150) : 0;
+        const total_price = basePrice + breakfastPrice;
 
         const reservation = await Reservation.create({
             user_id,
@@ -69,6 +71,7 @@ export const crearReservacionService = async (user_id, cabin_id, check_in, check
             guests,
             total_price,
             special_requests,
+            includes_breakfast,
             status: 'pending',
             booking_type: 'online',
             payment_method: 'online',
@@ -92,7 +95,7 @@ export const crearReservacionService = async (user_id, cabin_id, check_in, check
     }
 };
 
-export const crearReservacionWalkInService = async (cabin_id, check_in, check_out, guests, guest_name, guest_phone, payment_method, payment_status, created_by_admin) => {
+export const crearReservacionWalkInService = async (cabin_id, check_in, check_out, guests, guest_name, guest_phone, payment_method, payment_status, created_by_admin, includes_breakfast = false) => {
     try {
         const cabin = await Cabin.findByPk(cabin_id);
         if (!cabin) {
@@ -104,6 +107,20 @@ export const crearReservacionWalkInService = async (cabin_id, check_in, check_ou
         }
 
         // Verificar disponibilidad de fechas
+        console.log('Walk-in validation - Cabin:', cabin_id, 'Dates:', check_in, 'to', check_out);
+        
+        // Buscar todas las reservaciones activas para debug
+        const allActiveReservations = await Reservation.findAll({
+            where: {
+                cabin_id,
+                status: ['pending', 'confirmed']
+            }
+        });
+        console.log('Active reservations for this cabin:', allActiveReservations.map(r => ({
+            id: r.id,
+            dates: `${r.check_in} to ${r.check_out}`,
+            status: r.status
+        })));
         const conflictingReservation = await Reservation.findOne({
             where: {
                 cabin_id,
@@ -146,7 +163,9 @@ export const crearReservacionWalkInService = async (cabin_id, check_in, check_ou
         }
 
         const nights = Math.ceil((new Date(check_out) - new Date(check_in)) / (1000 * 60 * 60 * 24));
-        const total_price = nights * cabin.price_per_night;
+        const basePrice = nights * cabin.price_per_night;
+        const breakfastPrice = includes_breakfast ? (guests * nights * 150) : 0;
+        const total_price = basePrice + breakfastPrice;
 
         const reservation = await Reservation.create({
             user_id: '00000000-0000-0000-0000-000000000001', // Usuario invitado
@@ -161,7 +180,8 @@ export const crearReservacionWalkInService = async (cabin_id, check_in, check_ou
             guest_name,
             guest_phone,
             payment_method,
-            payment_status
+            payment_status,
+            includes_breakfast
         });
 
         return {
@@ -181,9 +201,88 @@ export const crearReservacionWalkInService = async (cabin_id, check_in, check_ou
     }
 };
 
+export const obtenerReservacionesPorRangoService = async (user_id, is_admin, startDate, endDate) => {
+    try {
+        let whereClause = {
+            [Op.or]: [
+                {
+                    check_in: {
+                        [Op.between]: [startDate, endDate]
+                    }
+                },
+                {
+                    check_out: {
+                        [Op.between]: [startDate, endDate]
+                    }
+                },
+                {
+                    [Op.and]: [
+                        {
+                            check_in: {
+                                [Op.lte]: startDate
+                            }
+                        },
+                        {
+                            check_out: {
+                                [Op.gte]: endDate
+                            }
+                        }
+                    ]
+                }
+            ]
+        };
+        
+        if (!is_admin) {
+            whereClause.user_id = user_id;
+        }
+
+        const reservations = await Reservation.findAll({
+            where: whereClause,
+            include: [
+                {
+                    model: Cabin,
+                    attributes: ['name', 'capacity']
+                },
+                {
+                    model: User,
+                    attributes: ['name', 'phone'],
+                    required: false
+                }
+            ],
+            order: [['check_in', 'ASC']]
+        });
+
+        return {
+            ok: true,
+            status: 200,
+            msg: "Reservaciones obtenidas exitosamente",
+            reservations
+        };
+
+    } catch (error) {
+        console.log(error);
+        return {
+            ok: false,
+            status: 500,
+            msg: 'Error en el servidor'
+        };
+    }
+};
+
 export const obtenerReservacionesService = async (user_id, is_admin, page = 1, limit = 10, filters = {}) => {
     try {
         let whereClause = {};
+        let includeClause = [
+            {
+                model: Cabin,
+                attributes: ['name', 'capacity']
+            },
+            {
+                model: User,
+                attributes: ['name', 'phone'],
+                required: false
+            }
+        ];
         
         if (!is_admin) {
             whereClause.user_id = user_id;
@@ -203,20 +302,27 @@ export const obtenerReservacionesService = async (user_id, is_admin, page = 1, l
         }
         
         if (filters.date) {
+            console.log('Filtering by date:', filters.date);
             whereClause[Op.or] = [
-                {
-                    check_in: {
-                        [Op.lte]: filters.date
-                    },
-                    check_out: {
-                        [Op.gte]: filters.date
-                    }
-                },
                 {
                     check_in: filters.date
                 },
                 {
                     check_out: filters.date
+                },
+                {
+                    [Op.and]: [
+                        {
+                            check_in: {
+                                [Op.lt]: filters.date
+                            }
+                        },
+                        {
+                            check_out: {
+                                [Op.gt]: filters.date
+                            }
+                        }
+                    ]
                 }
             ];
         }
@@ -236,25 +342,32 @@ export const obtenerReservacionesService = async (user_id, is_admin, page = 1, l
                 [Op.between]: [today.toISOString().split('T')[0], monthFromNow.toISOString().split('T')[0]]
             };
         }
+        
+        // Búsqueda por nombre de cliente
+        if (filters.search) {
+            whereClause[Op.or] = [
+                {
+                    guest_name: {
+                        [Op.iLike]: `%${filters.search}%`
+                    }
+                },
+                {
+                    '$user.name$': {
+                        [Op.iLike]: `%${filters.search}%`
+                    }
+                }
+            ];
+        }
 
         const offset = (page - 1) * limit;
 
         const { count, rows: reservations } = await Reservation.findAndCountAll({
             where: whereClause,
-            include: [
-                {
-                    model: Cabin,
-                    attributes: ['name', 'capacity']
-                },
-                {
-                    model: User,
-                    attributes: ['name'],
-                    required: false
-                }
-            ],
+            include: includeClause,
             order: [['created_at', 'DESC']],
             limit: parseInt(limit),
-            offset: parseInt(offset)
+            offset: parseInt(offset),
+            distinct: true
         });
 
         const totalPages = Math.ceil(count / limit);
@@ -347,10 +460,22 @@ export const actualizarReservacionService = async (id, updateData, user_id, is_a
             };
         }
 
+        // Lógica especial para total personalizado
+        if (updateData.total_price !== undefined) {
+            const newTotal = parseFloat(updateData.total_price)
+            if (newTotal < 0) {
+                return {
+                    ok: false,
+                    status: 400,
+                    msg: "El total no puede ser negativo"
+                }
+            }
+        }
+        
         // Lógica especial para pagos
         if (updateData.amount_paid !== undefined) {
             const amountPaid = parseFloat(updateData.amount_paid);
-            const totalPrice = parseFloat(reservation.total_price);
+            const totalPrice = parseFloat(updateData.total_price || reservation.total_price);
             
             console.log('Payment logic - Amount:', amountPaid, 'Total:', totalPrice);
             
@@ -442,7 +567,7 @@ export const actualizarReservacionService = async (id, updateData, user_id, is_a
                 },
                 {
                     model: User,
-                    attributes: ['name'],
+                    attributes: ['name', 'phone'],
                     required: false
                 }
             ]
