@@ -1,8 +1,10 @@
+import { secureFetch } from '../utils/apiInterceptor.js'
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 export const adminService = {
   getReservationsByDateRange: async (token, startDate, endDate) => {
-    const response = await fetch(`${API_URL}/reservations/range?start_date=${startDate}&end_date=${endDate}`, {
+    const response = await secureFetch(`${API_URL}/reservations/range?start_date=${startDate}&end_date=${endDate}`, {
       headers: { 'x-token': token }
     })
     return response.json()
@@ -34,7 +36,7 @@ export const adminService = {
       params.append('search', filters.search.trim())
     }
     
-    const response = await fetch(`${API_URL}/reservations?${params.toString()}`, {
+    const response = await secureFetch(`${API_URL}/reservations?${params.toString()}`, {
       headers: { 'x-token': token }
     })
     

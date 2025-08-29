@@ -5,6 +5,7 @@ import conexion from '../config/database.js';
 import routes from '../routes/routes.js'
 import bodyParser from 'body-parser';
 import '../models/associations.js'; // Importar asociaciones
+import { inicializarCronJobs } from '../services/cronJobs.js';
 
 class Server {
     constructor() {
@@ -15,7 +16,7 @@ class Server {
         this.conectarBD();
 
         //Cron jobs para actualizar estados
-        // actualizarEstados();
+        this.inicializarCronJobs();
 
         //Middlewares
         this.middlewares();
@@ -50,6 +51,10 @@ class Server {
 
     routes() {
         this.app.use(routes);
+    }
+
+    inicializarCronJobs() {
+        inicializarCronJobs();
     }
 
     listen() {

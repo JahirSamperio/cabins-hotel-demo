@@ -203,6 +203,20 @@ export const crearReservacionWalkInService = async (cabin_id, check_in, check_ou
 
 export const obtenerReservacionesPorRangoService = async (user_id, is_admin, startDate, endDate) => {
     try {
+        // Validar rango de fechas para evitar consultas muy grandes
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        const diffTime = Math.abs(end - start)
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        
+        if (diffDays > 365) {
+            return {
+                ok: false,
+                status: 400,
+                msg: 'El rango de fechas no puede ser mayor a 1 año'
+            }
+        }
+        
         let whereClause = {
             [Op.or]: [
                 {
@@ -249,7 +263,8 @@ export const obtenerReservacionesPorRangoService = async (user_id, is_admin, sta
                     required: false
                 }
             ],
-            order: [['check_in', 'ASC']]
+            order: [['check_in', 'ASC']],
+            limit: 1000 // Limitar resultados para evitar sobrecarga
         });
 
         return {

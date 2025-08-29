@@ -1,15 +1,39 @@
-import { useState, useEffect } from 'react'
-import { X, CheckCircle } from 'lucide-react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { X, CheckCircle, Download, Search } from 'lucide-react'
 import Swal from 'sweetalert2'
-import '../pages/Admin.css'
-import '../pages/Calendar.css'
+import '../../pages/Admin.css'
+import '../../pages/Calendar.css'
 
 const Agenda = ({ 
-  onStatusUpdate,
-  onWhatsAppContact 
+  onStatusUpdate
 }) => {
+  
+  const handleWhatsAppContact = (reservation) => {
+    const phone = reservation.guest_phone || reservation.user?.phone
+    if (!phone) return
+    
+    const cleanPhone = phone.replace(/[^0-9]/g, '')
+    
+    if (cleanPhone.length < 10) {
+      alert('Número de teléfono inválido')
+      return
+    }
+    
+    let finalPhone = cleanPhone
+    if (!cleanPhone.startsWith('52') && cleanPhone.length === 10) {
+      finalPhone = '52' + cleanPhone
+    }
+    
+    const message = `Hola! Te contacto desde Cabañas Huasca sobre tu reservación para ${reservation.cabin?.name} del ${reservation.check_in} al ${reservation.check_out}.`
+    const whatsappUrl = `https://wa.me/${finalPhone}?text=${encodeURIComponent(message)}`
+    
+    window.open(whatsappUrl, '_blank')
+  }
   const [reservations, setReservations] = useState([])
   const [loading, setLoading] = useState(false)
+  const [formLoading, setFormLoading] = useState(false)
+  const [paymentLoading, setPaymentLoading] = useState(false)
+  const [error, setError] = useState('')
   const [showReservationModal, setShowReservationModal] = useState(false)
   const [selectedCalendarReservation, setSelectedCalendarReservation] = useState(null)
   const [showNewReservationModal, setShowNewReservationModal] = useState(false)
@@ -22,12 +46,22 @@ const Agenda = ({
   const [dateRangeStart, setDateRangeStart] = useState('')
   const [dateRangeEnd, setDateRangeEnd] = useState('')
   const [dateRangeError, setDateRangeError] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [exportLoading, setExportLoading] = useState(false)
 
   const loadAgendaReservations = async () => {
+    if (dateRangeError) return
+    
     setLoading(true)
+    setError('')
+    
     try {
       const token = localStorage.getItem('token')
-      const { adminService } = await import('../services/adminService')
+      if (!token) {
+        throw new Error('No hay token de autenticación')
+      }
+      
+      const { adminService } = await import('../../services/adminService')
       const today = new Date()
       const bufferDays = 30
       const maxDays = 90
@@ -56,12 +90,33 @@ const Agenda = ({
         }
       }
       
-      const response = await adminService.getReservationsByDateRange(token, startDate, endDate)
+      // Timeout para consultas grandes
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 15000)
+      )
+      
+      const response = await Promise.race([
+        adminService.getReservationsByDateRange(token, startDate, endDate),
+        timeoutPromise
+      ])
+      
       if (response.ok) {
         setReservations(response.reservations || [])
+      } else {
+        throw new Error(response.msg || 'Error al cargar reservaciones')
       }
     } catch (err) {
       console.error('Error loading agenda reservations:', err)
+      
+      if (err.message === 'Timeout') {
+        setError('La consulta está tardando mucho. Intenta con un rango menor.')
+      } else if (err.message === 'No hay token de autenticación') {
+        setError('Sesión expirada. Recarga la página.')
+      } else {
+        setError('Error al cargar las reservaciones. Inténtalo de nuevo.')
+      }
+      
+      setReservations([])
     } finally {
       setLoading(false)
     }
@@ -114,15 +169,135 @@ const Agenda = ({
   }
 
   const validateDateRange = (start, end) => {
+    if (!start || !end) {
+      setDateRangeError('')
+      return
+    }
+    
     const startDate = new Date(start)
     const endDate = new Date(end)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     
     if (startDate > endDate) {
       setDateRangeError('La fecha de inicio debe ser anterior a la fecha final')
-    } else {
-      setDateRangeError('')
+      return
+    }
+    
+    // Validar que no sea más de 1 año en el pasado
+    const oneYearAgo = new Date()
+    oneYearAgo.setFullYear(today.getFullYear() - 1)
+    
+    if (startDate < oneYearAgo) {
+      setDateRangeError('No se pueden consultar fechas de más de 1 año atrás')
+      return
+    }
+    
+    // Validar que no sea más de 1 año en el futuro
+    const oneYearFromNow = new Date()
+    oneYearFromNow.setFullYear(today.getFullYear() + 1)
+    
+    if (endDate > oneYearFromNow) {
+      setDateRangeError('No se pueden consultar fechas de más de 1 año en el futuro')
+      return
+    }
+    
+    // Validar rango máximo de 3 meses
+    const diffTime = Math.abs(endDate - startDate)
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    if (diffDays > 90) {
+      setDateRangeError('El rango máximo es de 3 meses (90 días)')
+      return
+    }
+    
+    setDateRangeError('')
+  }
+
+  const handleExport = async () => {
+    if (dateRangeError) return
+    
+    setExportLoading(true)
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('No hay token de autenticación')
+      }
+      
+      const startDate = dateRangeStart || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      const endDate = dateRangeEnd || new Date().toISOString().split('T')[0]
+      
+      const { secureFetch } = await import('../../utils/apiInterceptor')
+      const { buildApiUrl, API_CONFIG } = await import('../../services/apiConfig')
+      const response = await secureFetch(buildApiUrl(API_CONFIG.ENDPOINTS.EXPORT_AGENDA, `?startDate=${startDate}&endDate=${endDate}`), {
+        headers: { 'x-token': token }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        
+        const csvContent = convertAgendaToCSV(data.data)
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `agenda-${startDate}-${endDate}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      } else {
+        throw new Error('Error en la respuesta del servidor')
+      }
+    } catch (error) {
+      console.error('Error exporting agenda:', error)
+      alert('Error al exportar agenda. Inténtalo de nuevo.')
+    } finally {
+      setExportLoading(false)
     }
   }
+  
+  const convertAgendaToCSV = (data) => {
+    const { reservations } = data
+    
+    let csv = 'AGENDA DE RESERVACIONES\n'
+    csv += 'ID,Huésped,Teléfono,Cabaña,Check-in,Check-out,Huéspedes,Estado,Estado Pago,Total,Pagado,Desayuno\n'
+    
+    if (reservations.length > 0) {
+      csv += reservations.map(res => [
+        res.id,
+        res.guest_name || res.user?.name || '',
+        res.guest_phone || res.user?.phone || '',
+        res.cabin?.name || '',
+        res.check_in,
+        res.check_out,
+        res.guests,
+        res.status,
+        res.payment_status,
+        res.total_price,
+        res.amount_paid || 0,
+        res.includes_breakfast ? 'Sí' : 'No'
+      ].join(',')).join('\n')
+    }
+    
+    return csv
+  }
+
+  // Filtrar reservaciones por búsqueda
+  const filteredReservations = useMemo(() => {
+    if (!searchTerm.trim()) return reservations
+    
+    const term = searchTerm.toLowerCase()
+    return reservations.filter(res => {
+      const guestName = (res.guest_name || res.user?.name || '').toLowerCase()
+      const guestPhone = (res.guest_phone || res.user?.phone || '').toLowerCase()
+      const cabinName = (res.cabin?.name || '').toLowerCase()
+      
+      return guestName.includes(term) || 
+             guestPhone.includes(term) || 
+             cabinName.includes(term)
+    })
+  }, [reservations, searchTerm])
 
   return (
     <>
@@ -131,6 +306,18 @@ const Agenda = ({
           <div className="loading">
             <div className="spinner"></div>
             <p>Cargando agenda...</p>
+          </div>
+        )}
+        
+        {error && (
+          <div className="error-message">
+            <p>{error}</p>
+            <button 
+              className="btn-retry"
+              onClick={loadAgendaReservations}
+            >
+              Reintentar
+            </button>
           </div>
         )}
         <div className="section-header">
@@ -162,6 +349,19 @@ const Agenda = ({
               <option value="month">Mensual</option>
             </select>
           </div>
+          
+          <div className="filter-group">
+            <label>Buscar:</label>
+            <div className="search-input">
+              <Search size={16} />
+              <input 
+                type="text"
+                placeholder="Nombre o teléfono..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
           <div className="filter-group">
             <label>Cabaña:</label>
             <select value={calendarCabinFilter} onChange={(e) => setCalendarCabinFilter(e.target.value)}>
@@ -179,21 +379,33 @@ const Agenda = ({
                 <input 
                   type="date" 
                   value={dateRangeStart}
+                  min={new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                  max={new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                   onChange={(e) => handleDateRangeChange('start', e.target.value)}
                 />
               </div>
               <div className="form-group">
-                <label>Hasta (máx. 31 días):</label>
+                <label>Hasta (máx. 90 días):</label>
                 <input 
                   type="date" 
                   value={dateRangeEnd}
                   min={dateRangeStart}
-                  max={dateRangeStart ? new Date(new Date(dateRangeStart).getTime() + 31 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : ''}
+                  max={dateRangeStart ? new Date(new Date(dateRangeStart).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                   onChange={(e) => handleDateRangeChange('end', e.target.value)}
                 />
               </div>
             </div>
           </div>
+          
+          <button 
+            className="btn-export"
+            onClick={handleExport}
+            disabled={exportLoading}
+            title="Exportar agenda"
+          >
+            <Download size={14} />
+            {exportLoading ? 'Exportando...' : 'Exportar'}
+          </button>
           
           <button 
             className="btn-clear-filters"
@@ -202,6 +414,7 @@ const Agenda = ({
               setDateRangeStart('')
               setDateRangeEnd('')
               setDateRangeError('')
+              setSearchTerm('')
               setCalendarPage(0)
             }}
             title="Limpiar filtros"
@@ -242,7 +455,7 @@ const Agenda = ({
         
         {!loading && (
           <CalendarView 
-            reservations={reservations} 
+            reservations={filteredReservations} 
             page={calendarPage}
             view={calendarView}
             cabinFilter={calendarCabinFilter}
@@ -260,7 +473,7 @@ const Agenda = ({
           reservation={selectedCalendarReservation}
           onClose={closeReservationModal}
           onStatusUpdate={onStatusUpdate}
-          onWhatsAppContact={onWhatsAppContact}
+          onWhatsAppContact={handleWhatsAppContact}
           setReservations={setReservations}
         />
       )}
@@ -307,23 +520,40 @@ const CalendarView = ({ reservations, page = 0, view = 'week', cabinFilter = 'al
     dates.push(new Date(d))
   }
   
-  const allCabins = [...new Set(reservations.map(r => r.cabin?.name).filter(Boolean))]
-  const cabins = cabinFilter === 'all' ? allCabins : allCabins.filter(name => name === cabinFilter)
+  const { allCabins, filteredCabins } = useMemo(() => {
+    const all = [...new Set(reservations.map(r => r.cabin?.name).filter(Boolean))]
+    const filtered = cabinFilter === 'all' ? all : all.filter(name => name === cabinFilter)
+    return { allCabins: all, filteredCabins: filtered }
+  }, [reservations, cabinFilter])
   
-  const getReservationForCabinAndDate = (cabinName, date) => {
+  const cabins = filteredCabins
+  
+  const reservationMap = useMemo(() => {
+    const map = new Map()
+    reservations.forEach(r => {
+      if (r.status === 'cancelled') return
+      
+      const checkIn = new Date(r.check_in)
+      const checkOut = new Date(r.check_out)
+      
+      for (let d = new Date(checkIn); d <= checkOut; d.setDate(d.getDate() + 1)) {
+        const key = `${r.cabin?.name}-${d.toISOString().split('T')[0]}`
+        map.set(key, r)
+      }
+    })
+    return map
+  }, [reservations])
+  
+  const getReservationForCabinAndDate = useCallback((cabinName, date) => {
     const dateStr = date.toISOString().split('T')[0]
-    return reservations.find(r => 
-      r.cabin?.name === cabinName &&
-      dateStr >= r.check_in &&
-      dateStr <= r.check_out
-    )
-  }
+    return reservationMap.get(`${cabinName}-${dateStr}`)
+  }, [reservationMap])
   
   const getStatusColor = (status) => {
     switch(status) {
       case 'confirmed': return '#d4edda'
       case 'pending': return '#fff3cd'
-      case 'cancelled': return '#f8d7da'
+      case 'completed': return '#e2d9f3'
       default: return '#e2e3e5'
     }
   }
@@ -365,6 +595,34 @@ const CalendarView = ({ reservations, page = 0, view = 'week', cabinFilter = 'al
     setDragStart(null)
     setDragEnd(null)
     setSelectedCabin('')
+  }
+  
+  // Touch events para móvil
+  const handleTouchStart = (cabinName, dateStr, e) => {
+    e.preventDefault()
+    handleStart(cabinName, dateStr)
+  }
+  
+  const handleTouchMove = (e) => {
+    if (!isDragging) return
+    e.preventDefault()
+    
+    const touch = e.touches[0]
+    const element = document.elementFromPoint(touch.clientX, touch.clientY)
+    const cell = element?.closest('.calendar-cell')
+    
+    if (cell) {
+      const cabinName = cell.dataset.cabin
+      const dateStr = cell.dataset.date
+      if (cabinName && dateStr) {
+        handleMove(cabinName, dateStr)
+      }
+    }
+  }
+  
+  const handleTouchEnd = (e) => {
+    e.preventDefault()
+    handleEnd()
   }
 
   const isInDragRange = (cabinName, dateStr) => {
@@ -428,14 +686,20 @@ const CalendarView = ({ reservations, page = 0, view = 'week', cabinFilter = 'al
                   } ${isToday ? 'today' : ''} ${borderClass} ${
                     reservation ? `status-${reservation.status}` : ''
                   } ${isInDragRange(cabinName, dateStr) ? 'drag-selected' : ''}`}
+                  data-cabin={cabinName}
+                  data-date={dateStr}
                   onClick={() => reservation && onReservationClick && onReservationClick(reservation)}
                   onMouseDown={() => !reservation && handleStart(cabinName, dateStr)}
                   onMouseEnter={() => handleMove(cabinName, dateStr)}
                   onMouseUp={handleEnd}
+                  onTouchStart={(e) => !reservation && handleTouchStart(cabinName, dateStr, e)}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
                   style={{ 
                     cursor: reservation ? 'pointer' : (isDragging ? 'grabbing' : 'grab'),
                     backgroundColor: reservation ? getStatusColor(reservation.status) : undefined,
-                    userSelect: 'none'
+                    userSelect: 'none',
+                    touchAction: 'none'
                   }}
                 >
                   {reservation ? (
@@ -512,7 +776,8 @@ const ReservationDetailsModal = ({ reservation, onClose, onStatusUpdate, onWhats
               <span className={`status ${reservation.status}`}>
                 {reservation.status === 'confirmed' ? 'Confirmada' :
                  reservation.status === 'pending' ? 'Pendiente' :
-                 reservation.status === 'cancelled' ? 'Cancelada' : reservation.status}
+                 reservation.status === 'cancelled' ? 'Cancelada' :
+                 reservation.status === 'completed' ? 'Completada' : reservation.status}
               </span>
             </div>
           </div>
@@ -647,7 +912,7 @@ const ReservationDetailsModal = ({ reservation, onClose, onStatusUpdate, onWhats
             {(reservation.guest_phone || reservation.user?.phone) && (
               <button 
                 className="btn-whatsapp" 
-                onClick={() => onWhatsAppContact(reservation)}
+                onClick={() => handleWhatsAppContact(reservation)}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.251"/>
@@ -712,7 +977,7 @@ const ReservationForm = ({ onClose, onSave, preselectedCabin = '', preselectedDa
   useEffect(() => {
     const loadCabins = async () => {
       try {
-        const { cabinsAPI } = await import('../services/api')
+        const { cabinsAPI } = await import('../../services/api')
         const response = await cabinsAPI.getAll()
         if (response.ok) {
           setCabins(response.cabins || [])
@@ -730,17 +995,71 @@ const ReservationForm = ({ onClose, onSave, preselectedCabin = '', preselectedDa
     loadCabins()
   }, [preselectedCabin])
 
+  const validateForm = () => {
+    const errors = []
+    
+    if (!formData.cabin_id) errors.push('Selecciona una cabaña')
+    if (!formData.guest_name.trim()) errors.push('Ingresa el nombre del huésped')
+    if (!formData.guest_phone.trim()) errors.push('Ingresa el teléfono')
+    if (!formData.check_in) errors.push('Selecciona fecha de check-in')
+    if (!formData.check_out) errors.push('Selecciona fecha de check-out')
+    if (!formData.guests || formData.guests < 1) errors.push('Ingresa número de huéspedes válido')
+    
+    if (formData.check_in && formData.check_out) {
+      const checkIn = new Date(formData.check_in)
+      const checkOut = new Date(formData.check_out)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      if (checkIn < today) errors.push('La fecha de check-in no puede ser pasada')
+      if (checkOut <= checkIn) errors.push('La fecha de check-out debe ser posterior al check-in')
+      
+      const diffTime = checkOut - checkIn
+      const diffDays = diffTime / (1000 * 60 * 60 * 24)
+      if (diffDays > 30) errors.push('La estadía no puede ser mayor a 30 días')
+    }
+    
+    if (formData.guest_phone && !/^[0-9]{10,}$/.test(formData.guest_phone.replace(/[^0-9]/g, ''))) {
+      errors.push('Ingresa un teléfono válido (mínimo 10 dígitos)')
+    }
+    
+    return errors
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    const validationErrors = validateForm()
+    if (validationErrors.length > 0) {
+      Swal.fire({
+        title: 'Errores en el formulario',
+        html: validationErrors.map(error => `• ${error}`).join('<br>'),
+        icon: 'error',
+        confirmButtonColor: '#2c5530'
+      })
+      return
+    }
+    
     setLoading(true)
     try {
       const token = localStorage.getItem('token')
-      const { reservationsAPI } = await import('../services/api')
+      if (!token) {
+        throw new Error('No hay token de autenticación')
+      }
       
-      const response = await reservationsAPI.createWalkIn({
-        ...formData,
-        guests: parseInt(formData.guests)
-      }, token)
+      const { reservationsAPI } = await import('../../services/api')
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 10000)
+      )
+      
+      const response = await Promise.race([
+        reservationsAPI.createWalkIn({
+          ...formData,
+          guests: parseInt(formData.guests)
+        }, token),
+        timeoutPromise
+      ])
       
       if (response.ok) {
         onSave(response.reservation)
@@ -762,6 +1081,20 @@ const ReservationForm = ({ onClose, onSave, preselectedCabin = '', preselectedDa
       }
     } catch (err) {
       console.error('Error creating reservation:', err)
+      
+      let errorMessage = 'Error al crear la reservación'
+      if (err.message === 'Timeout') {
+        errorMessage = 'La operación está tardando mucho. Inténtalo de nuevo.'
+      } else if (err.message === 'No hay token de autenticación') {
+        errorMessage = 'Sesión expirada. Recarga la página.'
+      }
+      
+      Swal.fire({
+        title: 'Error',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonColor: '#2c5530'
+      })
     } finally {
       setLoading(false)
     }
@@ -873,6 +1206,7 @@ const PaymentEditButton = ({ reservation, setReservations, onPaymentUpdate }) =>
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState(reservation.amount_paid || 0)
   const [customTotal, setCustomTotal] = useState(reservation.total_price || 0)
+  const [paymentLoading, setPaymentLoading] = useState(false)
 
   const getPaymentStatus = (amount, total) => {
     const paid = parseFloat(amount) || 0
@@ -888,17 +1222,53 @@ const PaymentEditButton = ({ reservation, setReservations, onPaymentUpdate }) =>
     return status === 'pending' ? 'Pendiente' : status === 'paid' ? 'Pagado Completo' : 'Pago Parcial'
   }
 
+  const validatePayment = () => {
+    const errors = []
+    const total = parseFloat(customTotal)
+    const paid = parseFloat(paymentAmount)
+    
+    if (isNaN(total) || total < 0) errors.push('El total debe ser un número válido mayor o igual a 0')
+    if (isNaN(paid) || paid < 0) errors.push('El monto pagado debe ser un número válido mayor o igual a 0')
+    if (paid > total) errors.push('El monto pagado no puede ser mayor al total')
+    
+    return errors
+  }
+
   const handlePaymentSave = async () => {
+    const validationErrors = validatePayment()
+    if (validationErrors.length > 0) {
+      Swal.fire({
+        title: 'Errores en el pago',
+        html: validationErrors.map(error => `• ${error}`).join('<br>'),
+        icon: 'error',
+        confirmButtonColor: '#2c5530'
+      })
+      return
+    }
+    
+    setPaymentLoading(true)
     try {
       const token = localStorage.getItem('token')
-      const { reservationsAPI } = await import('../services/api')
+      if (!token) {
+        throw new Error('No hay token de autenticación')
+      }
+      
+      const { reservationsAPI } = await import('../../services/api')
       
       const updateData = { 
         amount_paid: parseFloat(paymentAmount),
         total_price: parseFloat(customTotal)
       }
       
-      const response = await reservationsAPI.update(reservation.id, updateData, token)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 8000)
+      )
+      
+      const response = await Promise.race([
+        reservationsAPI.update(reservation.id, updateData, token),
+        timeoutPromise
+      ])
+      
       if (response.ok) {
         const updatedReservation = {
           ...reservation,
@@ -911,7 +1281,6 @@ const PaymentEditButton = ({ reservation, setReservations, onPaymentUpdate }) =>
           res.id === reservation.id ? updatedReservation : res
         ))
         
-        // Actualizar la modal de detalles
         if (onPaymentUpdate) {
           onPaymentUpdate(updatedReservation)
         }
@@ -924,9 +1293,27 @@ const PaymentEditButton = ({ reservation, setReservations, onPaymentUpdate }) =>
           confirmButtonColor: '#2c5530',
           timer: 2000
         })
+      } else {
+        throw new Error(response.msg || 'Error al actualizar el pago')
       }
     } catch (err) {
       console.error('Error updating payment:', err)
+      
+      let errorMessage = 'Error al actualizar el pago'
+      if (err.message === 'Timeout') {
+        errorMessage = 'La operación está tardando mucho. Inténtalo de nuevo.'
+      } else if (err.message === 'No hay token de autenticación') {
+        errorMessage = 'Sesión expirada. Recarga la página.'
+      }
+      
+      Swal.fire({
+        title: 'Error',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonColor: '#2c5530'
+      })
+    } finally {
+      setPaymentLoading(false)
     }
   }
 
@@ -1006,8 +1393,13 @@ const PaymentEditButton = ({ reservation, setReservations, onPaymentUpdate }) =>
                 <button className="btn-secondary" onClick={() => setShowPaymentModal(false)}>
                   Cancelar
                 </button>
-                <button className="btn-primary" onClick={handlePaymentSave}>
-                  Actualizar
+                <button 
+                  className="btn-primary" 
+                  onClick={handlePaymentSave}
+                  disabled={paymentLoading}
+                >
+                  {paymentLoading && <div className="button-spinner"></div>}
+                  {paymentLoading ? 'Actualizando...' : 'Actualizar'}
                 </button>
               </div>
             </div>

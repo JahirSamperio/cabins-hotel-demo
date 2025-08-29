@@ -1,0 +1,528 @@
+/* Dashboard Moderno */
+.dashboard-section {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.dashboard-header {
+  margin-bottom: 2rem;
+}
+
+.dashboard-header h3 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0 0 0.5rem 0;
+}
+
+.dashboard-subtitle {
+  color: #718096;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+/* Stats Grid Mejorado */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+}
+
+.stat-card.revenue::before {
+  background: linear-gradient(90deg, #11998e 0%, #38ef7d 100%);
+}
+
+.stat-card.bookings::before {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+}
+
+.stat-card.occupancy::before {
+  background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+}
+
+.stat-card.stays::before {
+  background: linear-gradient(90deg, #a8edea 0%, #fed6e3 100%);
+}
+
+.stat-card.reviews::before {
+  background: linear-gradient(90deg, #ffecd2 0%, #fcb69f 100%);
+}
+
+.stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f7fafc;
+  color: #4a5568;
+}
+
+.stat-card.revenue .stat-icon {
+  background: #e6fffa;
+  color: #319795;
+}
+
+.stat-card.bookings .stat-icon {
+  background: #ebf4ff;
+  color: #3182ce;
+}
+
+.stat-card.occupancy .stat-icon {
+  background: #fed7e2;
+  color: #d53f8c;
+}
+
+.stat-card.stays .stat-icon {
+  background: #e6fffa;
+  color: #319795;
+}
+
+.stat-card.reviews .stat-icon {
+  background: #fefcbf;
+  color: #d69e2e;
+}
+
+.stat-content h3 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0 0 0.25rem 0;
+  line-height: 1;
+}
+
+.stat-content p {
+  font-size: 0.9rem;
+  color: #718096;
+  margin: 0 0 0.5rem 0;
+  font-weight: 500;
+}
+
+.trend-text, .availability-text, .reviews-text, .stays-text, .reservations-text {
+  font-size: 0.8rem;
+  color: #a0aec0;
+}
+
+.trend-up {
+  color: #38a169;
+}
+
+.trend-down {
+  color: #e53e3e;
+}
+
+.trend-neutral {
+  color: #718096;
+}
+
+.occupancy-indicator {
+  display: flex;
+  align-items: center;
+}
+
+.occupancy-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.occupancy-dot.high {
+  background: #38a169;
+}
+
+.occupancy-dot.medium {
+  background: #d69e2e;
+}
+
+.occupancy-dot.low {
+  background: #e53e3e;
+}
+
+.rating-stars {
+  display: flex;
+  gap: 2px;
+}
+
+/* Métricas de Hoy */
+.today-metrics {
+  margin-bottom: 2rem;
+}
+
+.today-metrics h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin: 0 0 1rem 0;
+}
+
+.today-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.today-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.today-card:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.today-card svg {
+  color: #4a5568;
+}
+
+.today-card.checkins svg {
+  color: #38a169;
+}
+
+.today-card.checkouts svg {
+  color: #3182ce;
+}
+
+.today-card.pending svg {
+  color: #d69e2e;
+}
+
+.today-card.breakfast svg {
+  color: #805ad5;
+}
+
+.today-number {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a202c;
+  line-height: 1;
+}
+
+.today-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #718096;
+  margin-top: 0.25rem;
+}
+
+/* Alertas */
+.alerts-section {
+  margin-bottom: 2rem;
+}
+
+.alerts-section h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin: 0 0 1rem 0;
+}
+
+.alerts-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.alert-card {
+  background: white;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-left: 4px solid;
+}
+
+.alert-card.warning {
+  border-left-color: #d69e2e;
+  background: #fffbeb;
+  color: #744210;
+}
+
+.alert-card.info {
+  border-left-color: #3182ce;
+  background: #ebf8ff;
+  color: #2c5282;
+}
+
+.alert-card.danger {
+  border-left-color: #e53e3e;
+  background: #fed7d7;
+  color: #742a2a;
+}
+
+/* Reservaciones Recientes - Minimalista */
+.recent-section h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 0.75rem 0;
+}
+
+.recent-bookings {
+  background: #fafafa;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.booking-item {
+  display: grid;
+  grid-template-columns: 2fr 1fr 120px 80px;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.15s ease;
+}
+
+.booking-item:last-child {
+  border-bottom: none;
+}
+
+.booking-item:hover {
+  background: #f5f5f5;
+}
+
+.booking-guest {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.booking-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  justify-self: start;
+}
+
+.guest-name {
+  font-weight: 600;
+  color: #111827;
+  font-size: 0.9rem;
+  margin-bottom: 0.125rem;
+}
+
+.cabin-name {
+  color: #6b7280;
+  font-size: 0.8rem;
+  background: transparent;
+}
+
+.status-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-self: start;
+}
+
+.booking-dates {
+  color: #374151;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.booking-nights {
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+.booking-amount {
+  font-weight: 600;
+  color: #111827;
+  font-size: 0.9rem;
+  justify-self: end;
+}
+
+
+
+.booking-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-text {
+  font-size: 0.8rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.booking-status.pending {
+  background: #f59e0b;
+}
+
+.booking-status.confirmed {
+  background: #10b981;
+}
+
+.booking-status.cancelled {
+  background: #ef4444;
+}
+
+.booking-status.completed {
+  background: #6366f1;
+}
+
+
+
+/* Animaciones */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .booking-info {
+    grid-template-columns: 1.5fr 1fr;
+    gap: 0.75rem;
+  }
+  
+  .booking-dates {
+    grid-column: 1 / -1;
+    margin-top: 0.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-section {
+    padding: 1rem;
+  }
+  
+  .dashboard-header h3 {
+    font-size: 1.5rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .today-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .today-card {
+    padding: 0.75rem;
+  }
+  
+  .today-number {
+    font-size: 1.25rem;
+  }
+  
+  .alerts-grid {
+    flex-direction: column;
+  }
+  
+  .booking-item {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+  
+  .booking-guest {
+    grid-column: 1;
+  }
+  
+  .booking-details {
+    grid-column: 1;
+    margin-top: 0.25rem;
+  }
+  
+  .status-info {
+    grid-column: 1;
+    margin-top: 0.25rem;
+  }
+  
+  .booking-amount {
+    grid-column: 1;
+    justify-self: start;
+    margin-top: 0.25rem;
+    font-size: 1rem;
+    color: #059669;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-section {
+    padding: 0.75rem;
+  }
+  
+  .today-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-card {
+    padding: 1.25rem;
+  }
+  
+  .stat-content h3 {
+    font-size: 1.75rem;
+  }
+  
+  .booking-item {
+    padding: 0.75rem;
+  }
+  
+  .booking-meta {
+    justify-content: flex-start;
+    gap: 1rem;
+  }
+}

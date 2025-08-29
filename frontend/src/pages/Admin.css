@@ -450,6 +450,11 @@
   border-color: #d32f2f;
 }
 
+.reservation-status.completed {
+  color: #6f42c1;
+  border-color: #6f42c1;
+}
+
 /* Payment Status Styles */
 .payment-status {
   padding: 0.3rem 0.6rem;
