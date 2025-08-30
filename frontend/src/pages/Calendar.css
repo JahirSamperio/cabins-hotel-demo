@@ -10,10 +10,11 @@
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: 150px repeat(var(--date-columns, 18), minmax(80px, 1fr));
+  grid-template-columns: 160px repeat(var(--date-columns, 18), minmax(90px, 1fr));
   gap: 1px;
   background: #e0e0e0;
   width: 100%;
+  min-width: fit-content;
 }
 
 .calendar-header {
@@ -63,11 +64,12 @@
 
 .calendar-cell {
   background: #ffffff;
-  min-height: 60px;
+  min-height: 70px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+  padding: 0.25rem;
 }
 
 .calendar-cell.occupied {
@@ -326,37 +328,52 @@
 
 @media (max-width: 1200px) {
   .calendar-grid {
-    grid-template-columns: 120px repeat(var(--date-columns, 18), 70px);
+    grid-template-columns: 140px repeat(var(--date-columns, 18), 75px);
     width: auto;
   }
   
   .calendar-view {
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(44, 85, 48, 0.3) transparent;
   }
   
   .calendar-view::-webkit-scrollbar {
-    display: none;
+    height: 8px;
+  }
+  
+  .calendar-view::-webkit-scrollbar-track {
+    background: rgba(44, 85, 48, 0.1);
+    border-radius: 4px;
+  }
+  
+  .calendar-view::-webkit-scrollbar-thumb {
+    background: rgba(44, 85, 48, 0.3);
+    border-radius: 4px;
+  }
+  
+  .calendar-cell {
+    min-height: 65px;
   }
   
   .reservation-info {
-    font-size: 0.6rem;
+    font-size: 0.65rem;
+    padding: 0.2rem;
   }
   
   .guest-name {
-    font-size: 0.55rem;
+    font-size: 0.6rem;
   }
   
   .reservation-dates,
   .payment-amount {
-    font-size: 0.5rem;
+    font-size: 0.55rem;
   }
   
   .add-reservation-btn {
-    width: 20px;
-    height: 20px;
-    font-size: 0.8rem;
+    width: 22px;
+    height: 22px;
+    font-size: 0.85rem;
   }
 }
 /* Existing calendar styles... */

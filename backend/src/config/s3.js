@@ -1,15 +1,15 @@
-import AWS from 'aws-sdk';
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import multer from 'multer';
 import multerS3 from 'multer-s3';
 
-// Configurar AWS
-AWS.config.update({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION
+// Configurar S3 Client
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
 });
-
-const s3 = new AWS.S3();
 
 // Configurar multer para S3
 export const uploadS3 = multer({
@@ -37,13 +37,13 @@ export const uploadS3 = multer({
 
 // Función para eliminar imagen de S3
 export const deleteFromS3 = async (key) => {
-  const params = {
+  const command = new DeleteObjectCommand({
     Bucket: process.env.S3_BUCKET_NAME,
     Key: key
-  };
+  });
   
   try {
-    await s3.deleteObject(params).promise();
+    await s3.send(command);
     return { success: true };
   } catch (error) {
     throw new Error(`Error eliminando imagen: ${error.message}`);
