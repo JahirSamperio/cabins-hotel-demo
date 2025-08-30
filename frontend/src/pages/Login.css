@@ -53,74 +53,60 @@
 
 .input-wrapper {
   position: relative;
-  display: block;
+  display: flex;
+  align-items: center;
 }
 
 .input-wrapper svg:first-child {
   position: absolute;
-  left: 1rem;
+  left: 0.5rem;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-light);
-  z-index: 10;
+  color: #999;
+  z-index: 2;
   pointer-events: none;
-  opacity: 1;
-  visibility: visible;
-  display: block;
-  background: transparent;
+  width: 16px;
+  height: 16px;
 }
 
 .input-wrapper input {
   width: 100%;
-  padding: 1rem 3.5rem 1rem 3rem;
+  padding: 1rem 3rem 1rem 1rem;
   border: 1px solid #ddd;
-  border-radius: var(--border-radius);
+  border-radius: 8px;
   font-size: 1rem;
-  transition: var(--transition);
+  transition: all 0.3s ease;
   box-sizing: border-box;
-  background: var(--white);
-  z-index: 1;
-  position: relative;
+  background: white;
+  text-indent: 2rem;
 }
 
 .input-wrapper input::placeholder {
-  color: var(--text-light);
-  opacity: 0.7;
-  z-index: 0;
+  color: #999;
+  opacity: 1;
+  text-indent: 2rem;
 }
 
 .input-wrapper input:focus {
   outline: none;
-  border-color: var(--primary-color);
+  border-color: #2c5530;
   box-shadow: 0 0 0 2px rgba(44, 85, 48, 0.1);
 }
 
 .toggle-password {
   position: absolute;
-  right: 0.75rem;
+  right: 1rem;
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--text-light);
-  z-index: 11;
+  color: #999;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  opacity: 1;
-  visibility: visible;
-  padding: 0;
-}
-
-.toggle-password svg {
-  opacity: 1;
-  visibility: visible;
-  display: block;
-  background: transparent;
-  margin: 0;
+  padding: 4px;
 }
 
 .login-btn {

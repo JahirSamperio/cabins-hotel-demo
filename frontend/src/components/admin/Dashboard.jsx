@@ -16,7 +16,7 @@ const Dashboard = () => {
     setLoading(true)
     try {
       const token = localStorage.getItem('token')
-      const { buildApiUrl, API_CONFIG } = await import('../services/apiConfig')
+      const { buildApiUrl, API_CONFIG } = await import('../../services/apiConfig')
       
       const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.ADMIN_STATS), {
         headers: {

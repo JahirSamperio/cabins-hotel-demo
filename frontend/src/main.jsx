@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles/index.css'
-import App from './App.jsx'
+import { HotelApp } from './HotelApp.jsx'
 import { trackWebVitals, addResourceHints } from './utils/performance'
 
 // Initialize performance tracking
@@ -12,6 +12,6 @@ addResourceHints()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <HotelApp />
   </StrictMode>,
 )

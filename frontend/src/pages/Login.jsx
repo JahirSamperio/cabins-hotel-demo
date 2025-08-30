@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LogIn, Eye, EyeOff, User, Lock } from 'lucide-react'
+import { useAuthStore } from '../hooks'
 import './Login.css'
 
 const Login = () => {
@@ -9,6 +10,13 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
+  const { login, isAuthenticated, user } = useAuthStore()
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      navigate(user.is_admin ? '/admin' : '/dashboard')
+    }
+  }, [isAuthenticated, user, navigate])
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -25,8 +33,7 @@ const Login = () => {
       const response = await authAPI.login(formData)
       
       if (response.ok) {
-        localStorage.setItem('token', response.token)
-        localStorage.setItem('user', JSON.stringify(response.user))
+        login(response.user, response.token)
         navigate(response.user.is_admin ? '/admin' : '/dashboard')
       } else {
         setError(response.msg || 'Credenciales inválidas')
@@ -98,13 +105,7 @@ const Login = () => {
             <p>¿No tienes cuenta? <button className="link-btn" onClick={() => navigate('/register')}>Regístrate aquí</button></p>
           </div>
           
-          <div className="login-demo">
-            <p>Cuentas de prueba:</p>
-            <div className="demo-accounts">
-              <span>Admin: admin@cabanas.com</span>
-              <span>Usuario: user@cabanas.com</span>
-            </div>
-          </div>
+
         </div>
       </div>
     </div>

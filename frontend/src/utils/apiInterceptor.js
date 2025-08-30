@@ -39,7 +39,7 @@ export const apiInterceptor = {
       // Para otros errores de red, verificar si el token sigue siendo válido
       if (token) {
         try {
-          const { buildApiUrl, API_CONFIG } = await import('../apiConfig.js')
+          const { buildApiUrl, API_CONFIG } = await import('../services/apiConfig.js')
           const validateResponse = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.AUTH_RENEW), {
             headers: { 'x-token': token }
           })
