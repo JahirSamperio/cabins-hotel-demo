@@ -18,12 +18,12 @@
     "react-intersection-observer": "^9.13.1",
     "react-redux": "^9.2.0",
     "react-router-dom": "^6.28.0",
-    "sweetalert2": "^11.22.4"
+    "redux": "^5.0.1",
+    "sweetalert2": "^11.22.4",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
-    "@types/react": "^19.1.10",
-    "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.0",
     "eslint": "^9.33.0",
     "eslint-plugin-react-hooks": "^5.2.0",

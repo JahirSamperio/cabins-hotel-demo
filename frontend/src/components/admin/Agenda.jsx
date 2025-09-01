@@ -1,12 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { X, CheckCircle, Download, Search } from 'lucide-react'
 import Swal from 'sweetalert2'
-import '../../pages/Admin.css'
-import '../../pages/Calendar.css'
+import './Agenda.css'
 
-const Agenda = ({ 
-  onStatusUpdate
-}) => {
+const Agenda = ({ onStatusUpdate }) => {
   
   const handleWhatsAppContact = (reservation) => {
     const phone = reservation.guest_phone || reservation.user?.phone
@@ -29,10 +26,12 @@ const Agenda = ({
     
     window.open(whatsappUrl, '_blank')
   }
+
   const [reservations, setReservations] = useState([])
   const [loading, setLoading] = useState(false)
-  const [formLoading, setFormLoading] = useState(false)
-  const [paymentLoading, setPaymentLoading] = useState(false)
+
+
+
   const [error, setError] = useState('')
   const [showReservationModal, setShowReservationModal] = useState(false)
   const [selectedCalendarReservation, setSelectedCalendarReservation] = useState(null)
@@ -41,17 +40,37 @@ const Agenda = ({
   const [preselectedCabin, setPreselectedCabin] = useState('')
   const [preselectedCheckOut, setPreselectedCheckOut] = useState('')
   const [calendarPage, setCalendarPage] = useState(0)
-  const [calendarView, setCalendarView] = useState('week')
+  const [calendarView] = useState('month')
   const [calendarCabinFilter, setCalendarCabinFilter] = useState('all')
-  const [dateRangeStart, setDateRangeStart] = useState('')
-  const [dateRangeEnd, setDateRangeEnd] = useState('')
-  const [dateRangeError, setDateRangeError] = useState('')
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [searchTerm, setSearchTerm] = useState('')
   const [exportLoading, setExportLoading] = useState(false)
 
-  const loadAgendaReservations = async () => {
-    if (dateRangeError) return
+  useEffect(() => {
+    loadAgendaReservations()
+  }, [calendarPage, selectedMonth, selectedYear])
+
+  useEffect(() => {
+    // Sincronizar navegación con selector de mes
+    const currentDate = new Date()
+    const targetMonth = currentDate.getMonth() + calendarPage
+    const targetYear = currentDate.getFullYear() + Math.floor(targetMonth / 12)
+    const normalizedMonth = ((targetMonth % 12) + 12) % 12
     
+    setSelectedMonth(normalizedMonth)
+    setSelectedYear(targetYear)
+  }, [calendarPage])
+
+  // Refresh automático al entrar por primera vez
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadAgendaReservations()
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const loadAgendaReservations = async () => {
     setLoading(true)
     setError('')
     
@@ -62,35 +81,13 @@ const Agenda = ({
       }
       
       const { adminService } = await import('../../services/adminService')
-      const today = new Date()
-      const bufferDays = 30
-      const maxDays = 90
       
-      let startDate, endDate
+      // Usar mes/año seleccionado
+      const startDate = new Date(selectedYear, selectedMonth, 1).toISOString().split('T')[0]
+      const endDate = new Date(selectedYear, selectedMonth + 1, 0).toISOString().split('T')[0]
       
-      if (dateRangeStart && dateRangeEnd) {
-        startDate = dateRangeStart
-        endDate = dateRangeEnd
-      } else if (dateRangeStart && !dateRangeEnd) {
-        startDate = dateRangeStart
-        endDate = new Date(new Date(dateRangeStart).getTime() + 31 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      } else if (!dateRangeStart && dateRangeEnd) {
-        startDate = new Date(new Date(dateRangeEnd).getTime() - 31 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        endDate = dateRangeEnd
-      } else {
-        if (calendarView === 'month') {
-          const monthOffset = calendarPage
-          const currentMonth = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1)
-          startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).toISOString().split('T')[0]
-          endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).toISOString().split('T')[0]
-        } else {
-          const pageOffset = calendarPage * 7
-          startDate = new Date(today.getTime() - bufferDays * 24 * 60 * 60 * 1000 + pageOffset * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-          endDate = new Date(today.getTime() + (maxDays + pageOffset) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        }
-      }
+
       
-      // Timeout para consultas grandes
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Timeout')), 15000)
       )
@@ -101,12 +98,15 @@ const Agenda = ({
       ])
       
       if (response.ok) {
+
         setReservations(response.reservations || [])
       } else {
+
         throw new Error(response.msg || 'Error al cargar reservaciones')
       }
     } catch (err) {
       console.error('Error loading agenda reservations:', err)
+
       
       if (err.message === 'Timeout') {
         setError('La consulta está tardando mucho. Intenta con un rango menor.')
@@ -146,10 +146,6 @@ const Agenda = ({
     setPreselectedCheckOut('')
   }
 
-  useEffect(() => {
-    loadAgendaReservations()
-  }, [calendarPage, dateRangeStart, dateRangeEnd, calendarView])
-
   const handleDateRangeChange = (type, value) => {
     if (type === 'start') {
       setDateRangeStart(value)
@@ -184,7 +180,6 @@ const Agenda = ({
       return
     }
     
-    // Validar que no sea más de 1 año en el pasado
     const oneYearAgo = new Date()
     oneYearAgo.setFullYear(today.getFullYear() - 1)
     
@@ -193,7 +188,6 @@ const Agenda = ({
       return
     }
     
-    // Validar que no sea más de 1 año en el futuro
     const oneYearFromNow = new Date()
     oneYearFromNow.setFullYear(today.getFullYear() + 1)
     
@@ -202,7 +196,6 @@ const Agenda = ({
       return
     }
     
-    // Validar rango máximo de 3 meses
     const diffTime = Math.abs(endDate - startDate)
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     
@@ -283,7 +276,6 @@ const Agenda = ({
     return csv
   }
 
-  // Filtrar reservaciones por búsqueda
   const filteredReservations = useMemo(() => {
     if (!searchTerm.trim()) return reservations
     
@@ -301,7 +293,7 @@ const Agenda = ({
 
   return (
     <>
-      <div className="agenda-section">
+      <div className="agenda-section agenda-loaded">
         {loading && (
           <div className="loading">
             <div className="spinner"></div>
@@ -320,6 +312,7 @@ const Agenda = ({
             </button>
           </div>
         )}
+        
         <div className="section-header">
           <h3>Agenda de Ocupación</h3>
           <div className="payment-legend">
@@ -338,129 +331,134 @@ const Agenda = ({
           </div>
         </div>
       
-        <div className="calendar-filters">
-          <div className="filter-group">
-            <label>Vista:</label>
-            <select value={calendarView} onChange={(e) => {
-              setCalendarView(e.target.value)
-              setCalendarPage(0)
-            }}>
-              <option value="week">Semanal</option>
-              <option value="month">Mensual</option>
-            </select>
-          </div>
-          
-          <div className="filter-group">
-            <label>Buscar:</label>
-            <div className="search-input">
-              <Search size={16} />
-              <input 
-                type="text"
-                placeholder="Nombre o teléfono..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="filter-group">
-            <label>Cabaña:</label>
-            <select value={calendarCabinFilter} onChange={(e) => setCalendarCabinFilter(e.target.value)}>
-              <option value="all">Todas las cabañas</option>
-              {[...new Set(reservations.map(r => r.cabin?.name).filter(Boolean))].map(cabinName => (
-                <option key={cabinName} value={cabinName}>{cabinName}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="date-range-filter">
-            <div className="form-row">
-              <div className="form-group">
-                <label>Desde:</label>
+        <div className="calendar-controls">
+          <div className="calendar-filters">
+
+            
+            <div className="filter-group">
+              <label>Buscar:</label>
+              <div className="search-input">
+                <Search size={16} />
                 <input 
-                  type="date" 
-                  value={dateRangeStart}
-                  min={new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                  max={new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                  onChange={(e) => handleDateRangeChange('start', e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label>Hasta (máx. 90 días):</label>
-                <input 
-                  type="date" 
-                  value={dateRangeEnd}
-                  min={dateRangeStart}
-                  max={dateRangeStart ? new Date(new Date(dateRangeStart).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                  onChange={(e) => handleDateRangeChange('end', e.target.value)}
+                  type="text"
+                  placeholder="Nombre o teléfono..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
             </div>
+            
+            <div className="filter-group">
+              <label>Cabaña:</label>
+              <select value={calendarCabinFilter} onChange={(e) => setCalendarCabinFilter(e.target.value)}>
+                <option value="all">Todas las cabañas</option>
+                {[...new Set(reservations.map(r => r.cabin?.name).filter(Boolean))].map(cabinName => (
+                  <option key={cabinName} value={cabinName}>{cabinName}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="month-filter">
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Mes:</label>
+                  <select 
+                    value={selectedMonth}
+                    onChange={(e) => {
+                      const month = parseInt(e.target.value)
+                      setSelectedMonth(month)
+                      // Actualizar calendarPage para sincronizar navegación
+                      const today = new Date()
+                      const monthDiff = (selectedYear - today.getFullYear()) * 12 + (month - today.getMonth())
+                      setCalendarPage(monthDiff)
+                    }}
+                  >
+                    {Array.from({length: 12}, (_, i) => {
+                      const monthName = new Date(2024, i, 1).toLocaleDateString('es-ES', { month: 'long' })
+                      return <option key={i} value={i}>{monthName}</option>
+                    })}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Año:</label>
+                  <select 
+                    value={selectedYear}
+                    onChange={(e) => {
+                      const year = parseInt(e.target.value)
+                      setSelectedYear(year)
+                      // Actualizar calendarPage para sincronizar navegación
+                      const today = new Date()
+                      const monthDiff = (year - today.getFullYear()) * 12 + (selectedMonth - today.getMonth())
+                      setCalendarPage(monthDiff)
+                    }}
+                  >
+                    {Array.from({length: 5}, (_, i) => {
+                      const year = new Date().getFullYear() - 1 + i
+                      return <option key={year} value={year}>{year}</option>
+                    })}
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div className="filter-actions">
+              <button 
+                className="btn-export"
+                onClick={handleExport}
+                disabled={exportLoading}
+                title="Exportar agenda"
+              >
+                <Download size={14} />
+                {exportLoading ? 'Exportando...' : 'Exportar'}
+              </button>
+              
+              <button 
+                className="btn-clear-filters"
+                onClick={() => {
+                  setCalendarCabinFilter('all')
+                  setSearchTerm('')
+                  setCalendarPage(0)
+                  setSelectedMonth(new Date().getMonth())
+                  setSelectedYear(new Date().getFullYear())
+                }}
+                title="Limpiar filtros"
+              >
+                <X size={14} /> Limpiar
+              </button>
+            </div>
           </div>
-          
-          <button 
-            className="btn-export"
-            onClick={handleExport}
-            disabled={exportLoading}
-            title="Exportar agenda"
-          >
-            <Download size={14} />
-            {exportLoading ? 'Exportando...' : 'Exportar'}
-          </button>
-          
-          <button 
-            className="btn-clear-filters"
-            onClick={() => {
-              setCalendarCabinFilter('all')
-              setDateRangeStart('')
-              setDateRangeEnd('')
-              setDateRangeError('')
-              setSearchTerm('')
-              setCalendarPage(0)
-            }}
-            title="Limpiar filtros"
-          >
-            <X size={14} /> Limpiar
-          </button>
-          
-          {dateRangeError && (
-            <div className="date-error">{dateRangeError}</div>
-          )}
           
           <div className="calendar-navigation">
             <button 
               className="nav-btn"
               onClick={() => setCalendarPage(prev => prev - 1)}
-              title={calendarView === 'month' ? 'Mes anterior' : 'Semana anterior'}
-              disabled={dateRangeStart && dateRangeEnd}
+              title="Mes anterior"
             >
               ← Anterior
             </button>
             <span className="current-period">
-              {calendarView === 'month' ? 
-                new Date(new Date().getFullYear(), new Date().getMonth() + calendarPage, 1)
-                  .toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }) :
-                `Semana ${calendarPage + 1}`
-              }
+              {new Date(new Date().getFullYear(), new Date().getMonth() + calendarPage, 1)
+                .toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
             </span>
             <button 
               className="nav-btn"
               onClick={() => setCalendarPage(prev => prev + 1)}
-              title={calendarView === 'month' ? 'Siguiente mes' : 'Siguiente semana'}
-              disabled={dateRangeStart && dateRangeEnd}
+              title="Siguiente mes"
             >
               Siguiente →
             </button>
           </div>
+          
+
         </div>
         
         {!loading && (
           <CalendarView 
             reservations={filteredReservations} 
             page={calendarPage}
-            view={calendarView}
             cabinFilter={calendarCabinFilter}
-            dateRangeStart={dateRangeStart}
-            dateRangeEnd={dateRangeEnd}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
             onReservationClick={openReservationModal}
             onNewReservation={openNewReservationModal}
           />
@@ -493,44 +491,39 @@ const Agenda = ({
     </>
   )
 }
-
 // Componente CalendarView
-const CalendarView = ({ reservations, page = 0, view = 'week', cabinFilter = 'all', dateRangeStart = '', dateRangeEnd = '', onReservationClick, onNewReservation }) => {
+const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', selectedMonth, selectedYear, onReservationClick, onNewReservation }) => {
   const today = new Date()
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState(null)
   const [dragEnd, setDragEnd] = useState(null)
   const [selectedCabin, setSelectedCabin] = useState('')
   
-  let startDate, endDate
-  if (dateRangeStart && dateRangeEnd) {
-    startDate = new Date(dateRangeStart)
-    endDate = new Date(dateRangeEnd)
-  } else if (view === 'month') {
-    const currentMonth = new Date(today.getFullYear(), today.getMonth() + page, 1)
-    startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
-    endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
-  } else {
-    startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (page * 7) - 3)
-    endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (page * 7) + 14)
-  }
+  // Usar mes/año seleccionado o navegación
+  const targetMonth = selectedMonth !== undefined ? selectedMonth : today.getMonth() + page
+  const targetYear = selectedYear !== undefined ? selectedYear : today.getFullYear() + Math.floor(targetMonth / 12)
+  const normalizedMonth = ((targetMonth % 12) + 12) % 12
+  
+  const startDate = new Date(targetYear, normalizedMonth, 1)
+  const endDate = new Date(targetYear, normalizedMonth + 1, 0)
   
   const dates = []
   for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
     dates.push(new Date(d))
   }
   
-  const { allCabins, filteredCabins } = useMemo(() => {
-    const all = [...new Set(reservations.map(r => r.cabin?.name).filter(Boolean))]
+  const { filteredCabins } = useMemo(() => {
+    const all = [...new Set((reservations || []).map(r => r.cabin?.name).filter(Boolean))]
     const filtered = cabinFilter === 'all' ? all : all.filter(name => name === cabinFilter)
-    return { allCabins: all, filteredCabins: filtered }
+
+    return { filteredCabins: filtered }
   }, [reservations, cabinFilter])
   
   const cabins = filteredCabins
   
   const reservationMap = useMemo(() => {
     const map = new Map()
-    reservations.forEach(r => {
+    ;(reservations || []).forEach(r => {
       if (r.status === 'cancelled') return
       
       const checkIn = new Date(r.check_in)
@@ -598,14 +591,12 @@ const CalendarView = ({ reservations, page = 0, view = 'week', cabinFilter = 'al
   }
   
   // Touch events para móvil
-  const handleTouchStart = (cabinName, dateStr, e) => {
-    e.preventDefault()
+  const handleTouchStart = (cabinName, dateStr) => {
     handleStart(cabinName, dateStr)
   }
   
   const handleTouchMove = (e) => {
     if (!isDragging) return
-    e.preventDefault()
     
     const touch = e.touches[0]
     const element = document.elementFromPoint(touch.clientX, touch.clientY)
@@ -620,8 +611,7 @@ const CalendarView = ({ reservations, page = 0, view = 'week', cabinFilter = 'al
     }
   }
   
-  const handleTouchEnd = (e) => {
-    e.preventDefault()
+  const handleTouchEnd = () => {
     handleEnd()
   }
 
@@ -692,8 +682,8 @@ const CalendarView = ({ reservations, page = 0, view = 'week', cabinFilter = 'al
                   onMouseDown={() => !reservation && handleStart(cabinName, dateStr)}
                   onMouseEnter={() => handleMove(cabinName, dateStr)}
                   onMouseUp={handleEnd}
-                  onTouchStart={(e) => !reservation && handleTouchStart(cabinName, dateStr, e)}
-                  onTouchMove={handleTouchMove}
+                  onTouchStart={() => !reservation && handleTouchStart(cabinName, dateStr)}
+                  onTouchMove={(e) => e.preventDefault()}
                   onTouchEnd={handleTouchEnd}
                   style={{ 
                     cursor: reservation ? 'pointer' : (isDragging ? 'grabbing' : 'grab'),
@@ -754,8 +744,11 @@ ${reservation.guest_phone || reservation.user?.phone || 'Sin teléfono'}`}
 }
 
 // Modal de Detalles de Reservación
-const ReservationDetailsModal = ({ reservation, onClose, onStatusUpdate, onWhatsAppContact, setReservations }) => (
-  <div className="modal-overlay" onClick={onClose}>
+const ReservationDetailsModal = ({ reservation, onClose, onStatusUpdate, onWhatsAppContact, setReservations }) => {
+  if (!reservation) return null
+  
+  return (
+    <div className="modal-overlay" onClick={onClose}>
     <div className="modal-content" onClick={e => e.stopPropagation()}>
       <div className="modal-header">
         <h3>Detalles de Reservación</h3>
@@ -912,7 +905,7 @@ const ReservationDetailsModal = ({ reservation, onClose, onStatusUpdate, onWhats
             {(reservation.guest_phone || reservation.user?.phone) && (
               <button 
                 className="btn-whatsapp" 
-                onClick={() => handleWhatsAppContact(reservation)}
+                onClick={() => onWhatsAppContact(reservation)}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.251"/>
@@ -933,11 +926,13 @@ const ReservationDetailsModal = ({ reservation, onClose, onStatusUpdate, onWhats
       </div>
     </div>
   </div>
-)
+  )
+}
 
 // Modal de Nueva Reservación
-const NewReservationModal = ({ onClose, onSave, preselectedCabin, preselectedDate, preselectedCheckOut }) => (
-  <div className="modal-overlay" onClick={onClose}>
+const NewReservationModal = ({ onClose, onSave, preselectedCabin, preselectedDate, preselectedCheckOut }) => {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
     <div className="modal-content" onClick={e => e.stopPropagation()}>
       <div className="modal-header">
         <h3>Nueva Reservación</h3>
@@ -956,7 +951,8 @@ const NewReservationModal = ({ onClose, onSave, preselectedCabin, preselectedDat
       </div>
     </div>
   </div>
-)
+  )
+}
 
 // Formulario de Reservación
 const ReservationForm = ({ onClose, onSave, preselectedCabin = '', preselectedDate = '', preselectedCheckOut = '' }) => {
@@ -1410,4 +1406,5 @@ const PaymentEditButton = ({ reservation, setReservations, onPaymentUpdate }) =>
   )
 }
 
+export { CalendarView, ReservationDetailsModal, NewReservationModal, ReservationForm, PaymentEditButton }
 export default Agenda
