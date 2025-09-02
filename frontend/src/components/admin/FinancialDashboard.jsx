@@ -4,7 +4,6 @@ import {
   Users, CreditCard, AlertTriangle, CheckCircle,
   Clock, BarChart3, PieChart, MessageCircle, Download
 } from 'lucide-react'
-import '../../pages/Admin.css'
 import './FinancialDashboard.css'
 
 const FinancialDashboard = () => {

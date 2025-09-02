@@ -4,7 +4,6 @@ import {
   TrendingUp, TrendingDown, AlertCircle, 
   CheckCircle, Clock, Users, Coffee
 } from 'lucide-react'
-import '../../pages/Admin.css'
 import './Dashboard.css'
 
 const Dashboard = () => {

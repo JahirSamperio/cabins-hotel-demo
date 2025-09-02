@@ -1,6 +1,4 @@
 import { lazy, Suspense } from 'react'
-import Header from '../components/layout/Header'
-import Footer from '../components/layout/Footer'
 
 // Lazy loading de componentes
 const Hero = lazy(() => import('../components/features/Hero'))
@@ -24,53 +22,49 @@ const SectionLoader = () => (
 const Home = () => {
   return (
     <>
-      <Header />
-      <main>
-        <Suspense fallback={<SectionLoader />}>
-          <Hero />
-        </Suspense>
-        
-        <Suspense fallback={<SectionLoader />}>
-          <Cabanas />
-        </Suspense>
-        
-        <Suspense fallback={<SectionLoader />}>
-          <Servicios />
-        </Suspense>
-        
-        <Suspense fallback={<SectionLoader />}>
-          <Beneficios />
-        </Suspense>
-        
-        <Suspense fallback={<SectionLoader />}>
-          <Galeria />
-        </Suspense>
-        
-        <Suspense fallback={<SectionLoader />}>
-          <Availability />
-        </Suspense>
-        
-        <Suspense fallback={<SectionLoader />}>
-          <VirtualTour />
-        </Suspense>
-        
-        <Suspense fallback={<SectionLoader />}>
-          <Testimonios />
-        </Suspense>
-        
-        <Suspense fallback={<SectionLoader />}>
-          <Reviews />
-        </Suspense>
-        
-        <Suspense fallback={<SectionLoader />}>
-          <Mapa />
-        </Suspense>
-        
-        <Suspense fallback={<SectionLoader />}>
-          <Contacto />
-        </Suspense>
-      </main>
-      <Footer />
+      <Suspense fallback={<SectionLoader />}>
+        <Hero />
+      </Suspense>
+      
+      <Suspense fallback={<SectionLoader />}>
+        <Cabanas />
+      </Suspense>
+      
+      <Suspense fallback={<SectionLoader />}>
+        <Servicios />
+      </Suspense>
+      
+      <Suspense fallback={<SectionLoader />}>
+        <Beneficios />
+      </Suspense>
+      
+      <Suspense fallback={<SectionLoader />}>
+        <Galeria />
+      </Suspense>
+      
+      <Suspense fallback={<SectionLoader />}>
+        <Availability />
+      </Suspense>
+      
+      <Suspense fallback={<SectionLoader />}>
+        <VirtualTour />
+      </Suspense>
+      
+      <Suspense fallback={<SectionLoader />}>
+        <Testimonios />
+      </Suspense>
+      
+      <Suspense fallback={<SectionLoader />}>
+        <Reviews />
+      </Suspense>
+      
+      <Suspense fallback={<SectionLoader />}>
+        <Mapa />
+      </Suspense>
+      
+      <Suspense fallback={<SectionLoader />}>
+        <Contacto />
+      </Suspense>
     </>
   )
 }

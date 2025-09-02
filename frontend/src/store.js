@@ -1,103 +1,102 @@
-// Store Redux siguiendo patrón EGEL
-import { configureStore, createSlice } from '@reduxjs/toolkit'
+import { createStore, combineReducers } from 'redux'
 
-// Auth Slice
-const authSlice = createSlice({
-  name: 'auth',
-  initialState: {
-    user: null,
-    token: null,
-    isAuthenticated: false,
-    isLoading: false
-  },
-  reducers: {
-    loginStart: (state) => {
-      state.isLoading = true
-    },
-    loginSuccess: (state, action) => {
-      state.user = action.payload.user
-      state.token = action.payload.token
-      state.isAuthenticated = true
-      state.isLoading = false
-    },
-    logout: (state) => {
-      state.user = null
-      state.token = null
-      state.isAuthenticated = false
-      state.isLoading = false
-    },
-    setLoading: (state, action) => {
-      state.isLoading = action.payload
-    }
+// Auth Reducer
+const authInitialState = {
+  user: null,
+  token: null,
+  isAuthenticated: false,
+  isLoading: false
+}
+
+const authReducer = (state = authInitialState, action) => {
+  switch (action.type) {
+    case 'LOGIN_START':
+      return { ...state, isLoading: true }
+    case 'LOGIN_SUCCESS':
+      return {
+        ...state,
+        user: action.payload.user,
+        token: action.payload.token,
+        isAuthenticated: true,
+        isLoading: false
+      }
+    case 'LOGOUT':
+      return {
+        ...state,
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false
+      }
+    default:
+      return state
   }
-})
+}
 
-// Admin Slice
-const adminSlice = createSlice({
-  name: 'admin',
-  initialState: {
-    stats: {},
-    reservations: [],
-    cabins: [],
-    reviews: [],
-    loading: false,
-    activeTab: 'dashboard'
-  },
-  reducers: {
-    setStats: (state, action) => {
-      state.stats = action.payload
-    },
-    setReservations: (state, action) => {
-      state.reservations = action.payload
-    },
-    setCabins: (state, action) => {
-      state.cabins = action.payload
-    },
-    setReviews: (state, action) => {
-      state.reviews = action.payload
-    },
-    setLoading: (state, action) => {
-      state.loading = action.payload
-    },
-    setActiveTab: (state, action) => {
-      state.activeTab = action.payload
-    }
+// Admin Reducer
+const adminInitialState = {
+  stats: {},
+  reservations: [],
+  cabins: [],
+  reviews: [],
+  loading: false,
+  activeTab: 'dashboard'
+}
+
+const adminReducer = (state = adminInitialState, action) => {
+  switch (action.type) {
+    case 'SET_ACTIVE_TAB':
+      return { ...state, activeTab: action.payload }
+    case 'SET_RESERVATIONS':
+      return { ...state, reservations: action.payload }
+    case 'SET_ADMIN_LOADING':
+      return { ...state, loading: action.payload }
+    default:
+      return state
   }
-})
+}
 
-// Public Slice
-const publicSlice = createSlice({
-  name: 'public',
-  initialState: {
-    cabins: [],
-    availability: {},
-    reviews: [],
-    loading: false
-  },
-  reducers: {
-    setCabins: (state, action) => {
-      state.cabins = action.payload
-    },
-    setAvailability: (state, action) => {
-      state.availability = action.payload
-    },
-    setReviews: (state, action) => {
-      state.reviews = action.payload
-    },
-    setLoading: (state, action) => {
-      state.loading = action.payload
-    }
+// Public Reducer
+const publicInitialState = {
+  cabins: [],
+  availability: {},
+  reviews: [],
+  loading: false
+}
+
+const publicReducer = (state = publicInitialState, action) => {
+  switch (action.type) {
+    case 'SET_CABINS':
+      return { ...state, cabins: action.payload }
+    case 'SET_PUBLIC_LOADING':
+      return { ...state, loading: action.payload }
+    default:
+      return state
   }
+}
+
+const rootReducer = combineReducers({
+  auth: authReducer,
+  admin: adminReducer,
+  public: publicReducer
 })
 
-export const store = configureStore({
-  reducer: {
-    auth: authSlice.reducer,
-    admin: adminSlice.reducer,
-    public: publicSlice.reducer,
-  },
-})
+export const store = createStore(rootReducer)
 
-export const authActions = authSlice.actions
-export const adminActions = adminSlice.actions
-export const publicActions = publicSlice.actions
+// Action Creators
+export const authActions = {
+  loginStart: () => ({ type: 'LOGIN_START' }),
+  loginSuccess: (user, token) => ({ type: 'LOGIN_SUCCESS', payload: { user, token } }),
+  logout: () => ({ type: 'LOGOUT' })
+}
+
+export const adminActions = {
+  setActiveTab: (tab) => ({ type: 'SET_ACTIVE_TAB', payload: tab }),
+  setReservations: (reservations) => ({ type: 'SET_RESERVATIONS', payload: reservations }),
+  setLoading: (loading) => ({ type: 'SET_ADMIN_LOADING', payload: loading })
+}
+
+export const publicActions = {
+  setCabins: (cabins) => ({ type: 'SET_CABINS', payload: cabins }),
+  setLoading: (loading) => ({ type: 'SET_PUBLIC_LOADING', payload: loading })
+}

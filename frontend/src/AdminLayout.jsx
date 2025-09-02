@@ -3,7 +3,7 @@ import {
   BarChart3, Calendar, Home, LogOut, Building, Star, DollarSign 
 } from 'lucide-react'
 import { useAuthStore, useAdminStore } from './hooks'
-import './pages/Admin.css'
+
 
 export const AdminLayout = ({ children }) => {
   const navigate = useNavigate()
