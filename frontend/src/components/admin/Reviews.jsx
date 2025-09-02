@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Star, CheckCircle, X } from 'lucide-react'
 import '../../pages/Admin.css'
+import '../../styles/AdminDesignSystem.css'
 
 const Reviews = () => {
   const [reviews, setReviews] = useState([])
@@ -47,7 +48,7 @@ const Reviews = () => {
   return (
     <div className="reviews-section">
       <div className="section-header">
-        <h3>Reviews Pendientes</h3>
+        <h3 className="admin-section-title">Reviews Pendientes</h3>
       </div>
 
       {loading && (

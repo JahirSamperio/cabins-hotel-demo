@@ -1,14 +1,23 @@
 import { useState, useEffect } from 'react'
-import { Users, DollarSign, Edit, Eye, Trash2, Plus, Building, X } from 'lucide-react'
+import { Users, DollarSign, Edit, Eye, Trash2, Plus, Building, X, Search, Filter } from 'lucide-react'
 import Swal from 'sweetalert2'
 import '../../pages/Admin.css'
+import './Cabins.css'
+import '../../styles/AdminDesignSystem.css'
 
 const Cabins = () => {
   const [cabins, setCabins] = useState([])
+  const [filteredCabins, setFilteredCabins] = useState([])
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState('')
   const [selectedItem, setSelectedItem] = useState(null)
+
+  const [searchTerm, setSearchTerm] = useState('')
+  const [capacityFilter, setCapacityFilter] = useState('all')
+  const [priceFilter, setPriceFilter] = useState('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(8)
 
   const loadCabins = async () => {
     setLoading(true)
@@ -17,12 +26,61 @@ const Cabins = () => {
       const response = await cabinsAPI.getAll()
       if (response.ok) {
         setCabins(response.cabins || [])
+        setFilteredCabins(response.cabins || [])
       }
     } catch (err) {
       console.error('Error loading cabins:', err)
     } finally {
       setLoading(false)
     }
+  }
+
+  // Filter cabins
+  useEffect(() => {
+    let filtered = cabins
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(cabin => 
+        cabin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cabin.description.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    // Capacity filter
+    if (capacityFilter !== 'all') {
+      filtered = filtered.filter(cabin => {
+        if (capacityFilter === '1-2') return cabin.capacity <= 2
+        if (capacityFilter === '3-4') return cabin.capacity >= 3 && cabin.capacity <= 4
+        if (capacityFilter === '5+') return cabin.capacity >= 5
+        return true
+      })
+    }
+
+    // Price filter
+    if (priceFilter !== 'all') {
+      filtered = filtered.filter(cabin => {
+        if (priceFilter === 'low') return cabin.price_per_night < 1000
+        if (priceFilter === 'medium') return cabin.price_per_night >= 1000 && cabin.price_per_night < 2000
+        if (priceFilter === 'high') return cabin.price_per_night >= 2000
+        return true
+      })
+    }
+
+    setFilteredCabins(filtered)
+    setCurrentPage(1)
+  }, [cabins, searchTerm, capacityFilter, priceFilter])
+
+  // Pagination
+  const totalPages = Math.ceil(filteredCabins.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedCabins = filteredCabins.slice(startIndex, startIndex + itemsPerPage)
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setCapacityFilter('all')
+    setPriceFilter('all')
+    setCurrentPage(1)
   }
 
   const handleDeleteItem = async (id) => {
@@ -97,13 +155,76 @@ const Cabins = () => {
   return (
     <div className="cabins-section">
       <div className="section-header">
-        <h3>Gestión de Cabañas</h3>
+        <div className="header-info">
+          <h3 className="admin-section-title">Gestión de Cabañas</h3>
+          {!loading && cabins.length > 0 && (
+            <span className="cabins-count">
+              {filteredCabins.length} de {cabins.length} cabaña{cabins.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
         <div className="section-actions">
           <button className="btn-primary" onClick={() => openModal('cabin')}>
-            <Plus size={16} /> Nueva Cabaña
+            <Plus size={16} /> <span className="btn-text">Nueva Cabaña</span>
           </button>
         </div>
       </div>
+
+      {/* Filters */}
+      {!loading && cabins.length > 0 && (
+        <div className="admin-filters-section">
+          <div className="admin-filters-grid">
+            <div className="admin-filter-group admin-search-group">
+              <label className="admin-filter-label">Buscar cabañas</label>
+              <div className="admin-search-group">
+                <Search size={16} className="admin-search-icon" />
+                <input 
+                  type="text"
+                  className="admin-filter-input admin-search-input"
+                  placeholder="Buscar por nombre o descripción..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <div className="admin-filter-group">
+              <label className="admin-filter-label">Capacidad</label>
+              <select 
+                className="admin-filter-select" 
+                value={capacityFilter} 
+                onChange={(e) => setCapacityFilter(e.target.value)}
+              >
+                <option value="all">Todas las capacidades</option>
+                <option value="1-2">1-2 personas</option>
+                <option value="3-4">3-4 personas</option>
+                <option value="5+">5+ personas</option>
+              </select>
+            </div>
+            
+            <div className="admin-filter-group">
+              <label className="admin-filter-label">Precio por noche</label>
+              <select 
+                className="admin-filter-select" 
+                value={priceFilter} 
+                onChange={(e) => setPriceFilter(e.target.value)}
+              >
+                <option value="all">Todos los precios</option>
+                <option value="low">Menos de $1,000</option>
+                <option value="medium">$1,000 - $2,000</option>
+                <option value="high">Más de $2,000</option>
+              </select>
+            </div>
+            
+            <div className="admin-filter-group">
+              <label className="admin-filter-label">&nbsp;</label>
+              <button className="btn-clear" onClick={clearFilters}>
+                <X size={14} /> Limpiar Filtros
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {loading && (
         <div className="loading">
@@ -112,38 +233,63 @@ const Cabins = () => {
         </div>
       )}
 
-      {!loading && cabins.length > 0 ? (
-        <div className="cabins-grid">
-          {cabins.map(cabin => (
-            <div key={cabin.id} className="cabin-card">
-              <h4>{cabin.name}</h4>
-              <p><Users size={16} /> {cabin.capacity} personas</p>
-              <p><DollarSign size={16} /> ${cabin.price_per_night}/noche</p>
-              <p>{cabin.description}</p>
-              <div className="cabin-actions">
-                <button 
-                  className="edit-btn"
-                  onClick={() => openModal('cabin', cabin)}
-                >
-                  <Edit size={16} /> Editar
-                </button>
-                <button 
-                  className="view-btn"
-                  onClick={() => openModal('view-cabin', cabin)}
-                >
-                  <Eye size={16} /> Ver
-                </button>
-                <button 
-                  className="delete-btn"
-                  onClick={() => handleDeleteItem(cabin.id)}
-                >
-                  <Trash2 size={16} /> Eliminar
-                </button>
-              </div>
+      {!loading && filteredCabins.length > 0 ? (
+        <>
+          <div className="cabins-list">
+            {paginatedCabins.map(cabin => (
+              <CabinListItem key={cabin.id} cabin={cabin} onEdit={() => openModal('cabin', cabin)} onView={() => openModal('view-cabin', cabin)} onDelete={() => handleDeleteItem(cabin.id)} />
+            ))}
+          </div>
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="admin-pagination">
+              <button 
+                className="admin-pagination-btn"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                ← Anterior
+              </button>
+              
+              {[...Array(totalPages)].map((_, index) => {
+                const page = index + 1
+                if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
+                  return (
+                    <button
+                      key={page}
+                      className={`admin-pagination-btn ${currentPage === page ? 'active' : ''}`}
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </button>
+                  )
+                } else if (page === currentPage - 2 || page === currentPage + 2) {
+                  return <span key={page} className="admin-pagination-dots">...</span>
+                }
+                return null
+              })}
+              
+              <button 
+                className="admin-pagination-btn"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Siguiente →
+              </button>
             </div>
-          ))}
+          )}
+        </>
+      ) : !loading && filteredCabins.length === 0 && cabins.length > 0 ? (
+        <div className="no-results">
+          <Filter size={48} />
+          <h4>No se encontraron cabañas</h4>
+          <p>Intenta cambiar los filtros para ver más resultados</p>
+          <button className="btn-secondary" onClick={clearFilters}>
+            Limpiar filtros
+          </button>
         </div>
-      ) : !loading && (
+      ) : !loading && cabins.length === 0 ? (
         <div className="no-data">
           <Building size={48} />
           <h4>No hay cabañas registradas</h4>
@@ -152,7 +298,8 @@ const Cabins = () => {
             <Plus size={16} /> Crear Primera Cabaña
           </button>
         </div>
-      )}
+      ) : null}
+
 
       {/* Modal */}
       {showModal && (
@@ -463,6 +610,35 @@ const CabinDetails = ({ cabin }) => {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// Componente CabinListItem para vista de lista
+const CabinListItem = ({ cabin, onEdit, onView, onDelete }) => {
+  const isMobile = window.innerWidth <= 599
+  
+  return (
+    <div className={`cabin-list-item ${isMobile ? 'mobile' : ''}`}>
+      <div className="cabin-info">
+        <h4>{cabin.name}</h4>
+        <div className="cabin-details">
+          <span><Users size={14} /> {cabin.capacity} personas</span>
+          <span><DollarSign size={14} /> ${cabin.price_per_night}/noche</span>
+        </div>
+        <p>{cabin.description}</p>
+      </div>
+      <div className="cabin-actions">
+        <button className="edit-btn" onClick={onEdit} title="Editar">
+          <Edit size={16} />
+        </button>
+        <button className="view-btn" onClick={onView} title="Ver">
+          <Eye size={16} />
+        </button>
+        <button className="delete-btn" onClick={onDelete} title="Eliminar">
+          <Trash2 size={16} />
+        </button>
+      </div>
     </div>
   )
 }

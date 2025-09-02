@@ -46,13 +46,18 @@ export const useAdminStore = create((set) => ({
   reviews: [],
   loading: false,
   activeTab: 'dashboard',
+  pendingFilter: false,
   
   setActiveTab: (activeTab) => set({ activeTab }),
   setReservations: (reservations) => set({ reservations }),
   setStats: (stats) => set({ stats }),
   setCabins: (cabins) => set({ cabins }),
   setReviews: (reviews) => set({ reviews }),
-  setLoading: (loading) => set({ loading })
+  setLoading: (loading) => set({ loading }),
+  setPendingFilter: (pendingFilter) => set({ pendingFilter }),
+  
+  // Acción para ir a reservaciones pendientes
+  goToPendingReservations: () => set({ activeTab: 'reservations', pendingFilter: true })
 }))
 
 export const usePublicStore = create((set) => ({

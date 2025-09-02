@@ -3,24 +3,17 @@
   padding: 1.5rem;
   max-width: 1400px;
   margin: 0 auto;
-  background: transparent;
 }
 
 .dashboard-header {
   margin-bottom: 2rem;
-  background: none;
+  background: transparent;
   border: none;
   box-shadow: none;
   padding: 0;
 }
 
-.dashboard-header h3 {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #1a202c;
-  margin: 0 0 0.5rem 0;
-  line-height: 1.2;
-}
+
 
 .dashboard-subtitle {
   color: #718096;

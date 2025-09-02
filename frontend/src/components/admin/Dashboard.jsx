@@ -5,6 +5,7 @@ import {
   CheckCircle, Clock, Users, Coffee
 } from 'lucide-react'
 import './Dashboard.css'
+import '../../styles/AdminDesignSystem.css'
 
 const Dashboard = () => {
   const [stats, setStats] = useState({})
@@ -17,7 +18,8 @@ const Dashboard = () => {
       const token = localStorage.getItem('token')
       const { buildApiUrl, API_CONFIG } = await import('../../services/apiConfig')
       
-      const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.ADMIN_STATS), {
+      // Una sola llamada que obtiene stats + reservaciones recientes
+      const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.ADMIN_DASHBOARD), {
         headers: {
           'x-token': token,
           'Content-Type': 'application/json'
@@ -32,20 +34,7 @@ const Dashboard = () => {
       
       if (data.ok) {
         setStats(data.stats)
-      }
-      
-      const bookingsResponse = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.ADMIN_RECENT_BOOKINGS), {
-        headers: {
-          'x-token': token,
-          'Content-Type': 'application/json'
-        }
-      })
-      
-      if (bookingsResponse.ok) {
-        const bookingsData = await bookingsResponse.json()
-        if (bookingsData.ok) {
-          setRecentBookings(bookingsData.reservations)
-        }
+        setRecentBookings(data.reservations || [])
       }
     } catch (err) {
       // Datos de fallback para desarrollo
@@ -107,7 +96,7 @@ const Dashboard = () => {
   return (
     <div className="dashboard-section">
       <div className="dashboard-header">
-        <h3>Dashboard - Cabañas Huasca</h3>
+        <h3 className="admin-section-title" style={{color: '#2c5530'}}>Dashboard</h3>
         <p className="dashboard-subtitle">Resumen de actividad y métricas clave</p>
       </div>
 

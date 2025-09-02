@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { X, CheckCircle, Download, Search } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { X, CheckCircle, Download } from 'lucide-react'
 import Swal from 'sweetalert2'
+import { AgendaFilters, CalendarView } from './agenda'
 import './Agenda.css'
 import './Agenda-responsive.css'
 
@@ -316,7 +317,7 @@ const Agenda = ({ onStatusUpdate }) => {
         )}
         
         <div className="section-header">
-          <h3>Agenda de Ocupación</h3>
+          <h3 className="admin-section-title">Agenda de Ocupación</h3>
           <div className="payment-legend">
             <span className="legend-item">
               <span className="payment-dot payment-pending"></span>
@@ -337,105 +338,27 @@ const Agenda = ({ onStatusUpdate }) => {
         </div>
       
         <div className="calendar-controls">
-          <div className="filters-section">
-            <div className="filters-header">
-              <button 
-                className="filters-toggle"
-                onClick={() => setFiltersCollapsed(!filtersCollapsed)}
-                title={filtersCollapsed ? 'Mostrar filtros' : 'Ocultar filtros'}
-              >
-                <span className={`toggle-icon ${filtersCollapsed ? 'collapsed' : 'expanded'}`}>
-                  ▶ 
-                </span>
-              </button>
-              <h4 onClick={() => setFiltersCollapsed(!filtersCollapsed)} style={{cursor: 'pointer', margin: 0}}>Filtros</h4>
-            </div>
-            <div className={`filters-grid ${filtersCollapsed ? 'collapsed' : ''}`}>
-
-            <div className="search-cabin-row">
-              <div className="filter-group">
-                <label>Buscar:</label>
-                <div className="search-input">
-                  <Search size={16} />
-                  <input 
-                    type="text"
-                    placeholder="Nombre o teléfono..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-              </div>
-              
-              <div className="filter-group">
-                <label>Cabaña:</label>
-                <select value={calendarCabinFilter} onChange={(e) => setCalendarCabinFilter(e.target.value)}>
-                  <option value="all">Todas las cabañas</option>
-                  {[...new Set(reservations.map(r => r.cabin?.name).filter(Boolean))].map(cabinName => (
-                    <option key={cabinName} value={cabinName}>{cabinName}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            
-            <div className="month-filter">
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Mes:</label>
-                  <select 
-                    value={selectedMonth}
-                    onChange={(e) => {
-                      const month = parseInt(e.target.value)
-                      setSelectedMonth(month)
-                      const today = new Date()
-                      const monthDiff = (selectedYear - today.getFullYear()) * 12 + (month - today.getMonth())
-                      setCalendarPage(monthDiff)
-                    }}
-                  >
-                    {Array.from({length: 12}, (_, i) => {
-                      const monthName = new Date(2024, i, 1).toLocaleDateString('es-ES', { month: 'long' })
-                      return <option key={i} value={i}>{monthName}</option>
-                    })}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Año:</label>
-                  <select 
-                    value={selectedYear}
-                    onChange={(e) => {
-                      const year = parseInt(e.target.value)
-                      setSelectedYear(year)
-                      const today = new Date()
-                      const monthDiff = (year - today.getFullYear()) * 12 + (selectedMonth - today.getMonth())
-                      setCalendarPage(monthDiff)
-                    }}
-                  >
-                    {Array.from({length: 5}, (_, i) => {
-                      const year = new Date().getFullYear() - 1 + i
-                      return <option key={year} value={year}>{year}</option>
-                    })}
-                  </select>
-                </div>
-              </div>
-            </div>
-            
-            <div className="filter-group">
-              <label>&nbsp;</label>
-              <button 
-                className="btn-clear-filters"
-                onClick={() => {
-                  setCalendarCabinFilter('all')
-                  setSearchTerm('')
-                  setCalendarPage(0)
-                  setSelectedMonth(new Date().getMonth())
-                  setSelectedYear(new Date().getFullYear())
-                }}
-                title="Limpiar todos los filtros"
-              >
-                <X size={14} /> Limpiar
-              </button>
-            </div>
-            </div>
-          </div>
+          <AgendaFilters 
+            filtersCollapsed={filtersCollapsed}
+            setFiltersCollapsed={setFiltersCollapsed}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            calendarCabinFilter={calendarCabinFilter}
+            setCalendarCabinFilter={setCalendarCabinFilter}
+            selectedMonth={selectedMonth}
+            setSelectedMonth={setSelectedMonth}
+            selectedYear={selectedYear}
+            setSelectedYear={setSelectedYear}
+            setCalendarPage={setCalendarPage}
+            reservations={reservations}
+            onClearFilters={() => {
+              setCalendarCabinFilter('all')
+              setSearchTerm('')
+              setCalendarPage(0)
+              setSelectedMonth(new Date().getMonth())
+              setSelectedYear(new Date().getFullYear())
+            }}
+          />
           
           <div className="export-section">
             <button 
@@ -512,293 +435,7 @@ const Agenda = ({ onStatusUpdate }) => {
     </>
   )
 }
-// Componente CalendarView
-const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', selectedMonth, selectedYear, onReservationClick, onNewReservation }) => {
-  const today = new Date()
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragStart, setDragStart] = useState(null)
-  const [dragEnd, setDragEnd] = useState(null)
-  const [selectedCabin, setSelectedCabin] = useState('')
-  
-  // Usar mes/año seleccionado o navegación
-  const targetMonth = selectedMonth !== undefined ? selectedMonth : today.getMonth() + page
-  const targetYear = selectedYear !== undefined ? selectedYear : today.getFullYear() + Math.floor(targetMonth / 12)
-  const normalizedMonth = ((targetMonth % 12) + 12) % 12
-  
-  const startDate = new Date(targetYear, normalizedMonth, 1)
-  const endDate = new Date(targetYear, normalizedMonth + 1, 0)
-  
-  const dates = []
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    dates.push(new Date(d))
-  }
-  
-  const { filteredCabins } = useMemo(() => {
-    const all = [...new Set((reservations || []).map(r => r.cabin?.name).filter(Boolean))]
-    const filtered = cabinFilter === 'all' ? all : all.filter(name => name === cabinFilter)
 
-    return { filteredCabins: filtered }
-  }, [reservations, cabinFilter])
-  
-  const cabins = filteredCabins
-  
-  const reservationMap = useMemo(() => {
-    const map = new Map()
-    ;(reservations || []).forEach(r => {
-      if (r.status === 'cancelled') return
-      
-      const checkIn = new Date(r.check_in)
-      const checkOut = new Date(r.check_out)
-      
-      for (let d = new Date(checkIn); d <= checkOut; d.setDate(d.getDate() + 1)) {
-        const key = `${r.cabin?.name}-${d.toISOString().split('T')[0]}`
-        map.set(key, r)
-      }
-    })
-    return map
-  }, [reservations])
-  
-  const getReservationForCabinAndDate = useCallback((cabinName, date) => {
-    const dateStr = date.toISOString().split('T')[0]
-    return reservationMap.get(`${cabinName}-${dateStr}`)
-  }, [reservationMap])
-  
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'confirmed': return '#d4edda'
-      case 'pending': return '#fff3cd'
-      case 'completed': return '#e2d9f3'
-      default: return '#e2e3e5'
-    }
-  }
-  
-  const formatDate = (date) => {
-    const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-    return {
-      day: days[date.getDay()],
-      date: date.getDate(),
-      month: months[date.getMonth()]
-    }
-  }
-
-  const handleStart = (cabinName, dateStr) => {
-    if (dateStr < today.toISOString().split('T')[0]) return
-    setIsDragging(true)
-    setDragStart(dateStr)
-    setDragEnd(dateStr)
-    setSelectedCabin(cabinName)
-  }
-
-  const handleMove = (cabinName, dateStr) => {
-    if (isDragging && cabinName === selectedCabin && dateStr >= today.toISOString().split('T')[0]) {
-      setDragEnd(dateStr)
-    }
-  }
-
-  const handleEnd = () => {
-    if (isDragging && dragStart && dragEnd && selectedCabin) {
-      const startDate = new Date(dragStart)
-      const endDate = new Date(dragEnd)
-      const checkIn = startDate <= endDate ? dragStart : dragEnd
-      const checkOut = startDate <= endDate ? dragEnd : dragStart
-      
-      onNewReservation && onNewReservation(selectedCabin, checkIn, checkOut)
-    }
-    setIsDragging(false)
-    setDragStart(null)
-    setDragEnd(null)
-    setSelectedCabin('')
-  }
-  
-  // Touch events para móvil
-  const handleTouchStart = (cabinName, dateStr) => {
-    handleStart(cabinName, dateStr)
-  }
-  
-  const handleTouchMove = (e) => {
-    if (!isDragging) return
-    
-    const touch = e.touches[0]
-    const element = document.elementFromPoint(touch.clientX, touch.clientY)
-    const cell = element?.closest('.calendar-cell')
-    
-    if (cell) {
-      const cabinName = cell.dataset.cabin
-      const dateStr = cell.dataset.date
-      if (cabinName && dateStr) {
-        handleMove(cabinName, dateStr)
-      }
-    }
-  }
-  
-  const handleTouchEnd = () => {
-    handleEnd()
-  }
-
-  const isInDragRange = (cabinName, dateStr) => {
-    if (!isDragging || cabinName !== selectedCabin || !dragStart || !dragEnd) return false
-    const start = new Date(Math.min(new Date(dragStart), new Date(dragEnd)))
-    const end = new Date(Math.max(new Date(dragStart), new Date(dragEnd)))
-    const current = new Date(dateStr)
-    return current >= start && current <= end
-  }
-  
-  // Forzar recálculo de CSS Grid al montar el componente
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const gridElement = document.querySelector('.calendar-grid')
-      if (gridElement) {
-        gridElement.style.display = 'none'
-        gridElement.offsetHeight // Forzar reflow
-        gridElement.style.display = 'grid'
-        gridElement.style.setProperty('--date-columns', dates.length)
-        gridElement.classList.add('grid-ready')
-      }
-    }, 100)
-    return () => clearTimeout(timer)
-  }, [dates.length])
-  
-  // Touch events no pasivos
-  useEffect(() => {
-    const cells = document.querySelectorAll('.calendar-cell')
-    const handleTouchMoveNonPassive = (e) => {
-      if (isDragging) {
-        e.preventDefault()
-        handleTouchMove(e)
-      }
-    }
-    
-    cells.forEach(cell => {
-      cell.addEventListener('touchmove', handleTouchMoveNonPassive, { passive: false })
-    })
-    
-    return () => {
-      cells.forEach(cell => {
-        cell.removeEventListener('touchmove', handleTouchMoveNonPassive)
-      })
-    }
-  }, [isDragging, handleTouchMove])
-  
-  return (
-    <div className="calendar-view">
-      <div className="calendar-grid" style={{'--date-columns': dates.length}}>
-        <div className="calendar-header">
-          <div className="cabin-header">
-            <span>Cabañas</span>
-          </div>
-          {dates.map(date => {
-            const formatted = formatDate(date)
-            const isToday = date.toISOString().split('T')[0] === today.toISOString().split('T')[0]
-            return (
-              <div key={date.toISOString()} className={`date-header ${isToday ? 'today-header' : ''}`}>
-                <div className="date-day-name">{formatted.day}</div>
-                <div className="date-number">{formatted.date}</div>
-                <div className="date-month">{formatted.month}</div>
-              </div>
-            )
-          })}
-        </div>
-        
-        {cabins.map(cabinName => (
-          <div key={cabinName} className="calendar-row">
-            <div className="cabin-name">{cabinName}</div>
-            {dates.map(date => {
-              const reservation = getReservationForCabinAndDate(cabinName, date)
-              const dateStr = date.toISOString().split('T')[0]
-              const isToday = dateStr === today.toISOString().split('T')[0]
-              
-              let borderClass = ''
-              if (reservation) {
-                const isCheckIn = reservation.check_in === dateStr
-                const isCheckOut = reservation.check_out === dateStr
-                const isMiddle = dateStr > reservation.check_in && dateStr < reservation.check_out
-                
-                if (isCheckIn && isCheckOut) {
-                  borderClass = 'single-day'
-                } else if (isCheckIn) {
-                  borderClass = 'range-start'
-                } else if (isCheckOut) {
-                  borderClass = 'range-end'
-                } else if (isMiddle) {
-                  borderClass = 'range-middle'
-                }
-              }
-              
-              return (
-                <div 
-                  key={date.toISOString()} 
-                  className={`calendar-cell ${
-                    reservation ? 'occupied' : 'available'
-                  } ${isToday ? 'today' : ''} ${borderClass} ${
-                    reservation ? `status-${reservation.status}` : ''
-                  } ${isInDragRange(cabinName, dateStr) ? 'drag-selected' : ''}`}
-                  data-cabin={cabinName}
-                  data-date={dateStr}
-                  onClick={() => reservation && onReservationClick && onReservationClick(reservation)}
-                  onMouseDown={() => !reservation && handleStart(cabinName, dateStr)}
-                  onMouseEnter={() => handleMove(cabinName, dateStr)}
-                  onMouseUp={handleEnd}
-                  onTouchStart={() => !reservation && handleTouchStart(cabinName, dateStr)}
-
-                  onTouchEnd={handleTouchEnd}
-                  style={{ 
-                    cursor: reservation ? 'pointer' : (isDragging ? 'grabbing' : 'grab'),
-                    backgroundColor: reservation ? getStatusColor(reservation.status) : undefined,
-                    userSelect: 'none',
-                    touchAction: 'none'
-                  }}
-                >
-                  {reservation ? (
-                    <div 
-                      className="reservation-info"
-                      title={`${reservation.guest_name || reservation.user?.name || 'Huésped'}
-${reservation.guests} huésped${reservation.guests > 1 ? 'es' : ''}
-${reservation.check_in} - ${reservation.check_out}
-${reservation.includes_breakfast ? 'Con desayunador' : 'Sin desayunador'}
-$${reservation.total_price} (${reservation.payment_status === 'pending' ? 'Sin pagar' : reservation.payment_status === 'paid' ? 'Pagado' : 'Pago parcial'})
-${reservation.guest_phone || reservation.user?.phone || 'Sin teléfono'}`}
-                    >
-                      <div className="guest-name">
-                        {reservation.check_in === dateStr && (
-                          <span className={`payment-dot payment-${reservation.payment_status}`}></span>
-                        )}
-                        {(() => {
-                          const checkIn = new Date(reservation.check_in)
-                          const checkOut = new Date(reservation.check_out)
-                          const totalDays = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24))
-                          const middleDay = Math.floor(totalDays / 2)
-                          const currentDay = Math.ceil((new Date(dateStr) - checkIn) / (1000 * 60 * 60 * 24))
-                          return currentDay === middleDay ? (reservation.guest_name || reservation.user?.name || 'Huésped') : ''
-                        })()}
-                      </div>
-                      <div className="reservation-dates">
-                        {reservation.check_in === dateStr ? 'IN' : ''}
-                        {reservation.check_out === dateStr ? 'OUT' : ''}
-                      </div>
-                    </div>
-                  ) : (
-                    dateStr >= today.toISOString().split('T')[0] && (
-                      <button 
-                        className="add-reservation-btn"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onNewReservation && onNewReservation(cabinName, dateStr)
-                        }}
-                      >
-                        +
-                      </button>
-                    )
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 // Modal de Detalles de Reservación
 const ReservationDetailsModal = ({ reservation, onClose, onStatusUpdate, onWhatsAppContact, setReservations }) => {
@@ -1463,5 +1100,5 @@ const PaymentEditButton = ({ reservation, setReservations, onPaymentUpdate }) =>
   )
 }
 
-export { CalendarView, ReservationDetailsModal, NewReservationModal, ReservationForm, PaymentEditButton }
+export { ReservationDetailsModal, NewReservationModal, ReservationForm, PaymentEditButton }
 export default Agenda

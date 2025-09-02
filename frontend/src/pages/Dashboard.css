@@ -4,10 +4,10 @@
 }
 
 .dashboard-header {
-  background: var(--primary-color);
+  background: transparent;
   color: var(--white);
-  padding: 2rem 0;
-  box-shadow: 0 2px 8px rgba(44, 85, 48, 0.2);
+  /* padding: 2rem 0; */
+  /* box-shadow: 0 2px 8px rgba(44, 85, 48, 0.2); */
 }
 
 .header-content {
@@ -345,6 +345,11 @@
 .status.completada {
   background: #e3f2fd;
   color: #1976d2;
+}
+
+.status.pending {
+  background: #fff3e0;
+  color: #f57c00;
 }
 
 .reservation-details {

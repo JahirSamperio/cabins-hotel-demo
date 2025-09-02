@@ -5,6 +5,7 @@ import {
   Clock, BarChart3, PieChart, MessageCircle, Download
 } from 'lucide-react'
 import './FinancialDashboard.css'
+import '../../styles/AdminDesignSystem.css'
 
 const FinancialDashboard = () => {
   const [summary, setSummary] = useState({})
@@ -276,7 +277,7 @@ const FinancialDashboard = () => {
   return (
     <div className="financial-section">
       <div className="financial-header">
-        <h3>Dashboard Financiero</h3>
+        <h3 className="admin-section-title">Dashboard Financiero</h3>
         <div className="financial-controls">
           <div className="date-range">
             <input
