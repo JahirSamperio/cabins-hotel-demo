@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { X, CheckCircle, Download, Search } from 'lucide-react'
 import Swal from 'sweetalert2'
 import './Agenda.css'
+import './Agenda-responsive.css'
 
 const Agenda = ({ onStatusUpdate }) => {
   
@@ -46,6 +47,7 @@ const Agenda = ({ onStatusUpdate }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [searchTerm, setSearchTerm] = useState('')
   const [exportLoading, setExportLoading] = useState(false)
+  const [filtersCollapsed, setFiltersCollapsed] = useState(true)
 
   useEffect(() => {
     loadAgendaReservations()
@@ -329,33 +331,50 @@ const Agenda = ({ onStatusUpdate }) => {
               Pagado completo
             </span>
           </div>
+          <div className="mobile-hint" style={{fontSize: '0.8rem', color: '#666', marginTop: '0.5rem', display: 'none'}}>
+            📱 Toca una reservación para ver detalles • Toca un día libre para crear reservación
+          </div>
         </div>
       
         <div className="calendar-controls">
-          <div className="calendar-filters">
-
-            
-            <div className="filter-group">
-              <label>Buscar:</label>
-              <div className="search-input">
-                <Search size={16} />
-                <input 
-                  type="text"
-                  placeholder="Nombre o teléfono..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+          <div className="filters-section">
+            <div className="filters-header">
+              <button 
+                className="filters-toggle"
+                onClick={() => setFiltersCollapsed(!filtersCollapsed)}
+                title={filtersCollapsed ? 'Mostrar filtros' : 'Ocultar filtros'}
+              >
+                <span className={`toggle-icon ${filtersCollapsed ? 'collapsed' : 'expanded'}`}>
+                  ▶ 
+                </span>
+              </button>
+              <h4 onClick={() => setFiltersCollapsed(!filtersCollapsed)} style={{cursor: 'pointer', margin: 0}}>Filtros</h4>
             </div>
-            
-            <div className="filter-group">
-              <label>Cabaña:</label>
-              <select value={calendarCabinFilter} onChange={(e) => setCalendarCabinFilter(e.target.value)}>
-                <option value="all">Todas las cabañas</option>
-                {[...new Set(reservations.map(r => r.cabin?.name).filter(Boolean))].map(cabinName => (
-                  <option key={cabinName} value={cabinName}>{cabinName}</option>
-                ))}
-              </select>
+            <div className={`filters-grid ${filtersCollapsed ? 'collapsed' : ''}`}>
+
+            <div className="search-cabin-row">
+              <div className="filter-group">
+                <label>Buscar:</label>
+                <div className="search-input">
+                  <Search size={16} />
+                  <input 
+                    type="text"
+                    placeholder="Nombre o teléfono..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <div className="filter-group">
+                <label>Cabaña:</label>
+                <select value={calendarCabinFilter} onChange={(e) => setCalendarCabinFilter(e.target.value)}>
+                  <option value="all">Todas las cabañas</option>
+                  {[...new Set(reservations.map(r => r.cabin?.name).filter(Boolean))].map(cabinName => (
+                    <option key={cabinName} value={cabinName}>{cabinName}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             
             <div className="month-filter">
@@ -367,7 +386,6 @@ const Agenda = ({ onStatusUpdate }) => {
                     onChange={(e) => {
                       const month = parseInt(e.target.value)
                       setSelectedMonth(month)
-                      // Actualizar calendarPage para sincronizar navegación
                       const today = new Date()
                       const monthDiff = (selectedYear - today.getFullYear()) * 12 + (month - today.getMonth())
                       setCalendarPage(monthDiff)
@@ -386,7 +404,6 @@ const Agenda = ({ onStatusUpdate }) => {
                     onChange={(e) => {
                       const year = parseInt(e.target.value)
                       setSelectedYear(year)
-                      // Actualizar calendarPage para sincronizar navegación
                       const today = new Date()
                       const monthDiff = (year - today.getFullYear()) * 12 + (selectedMonth - today.getMonth())
                       setCalendarPage(monthDiff)
@@ -401,17 +418,8 @@ const Agenda = ({ onStatusUpdate }) => {
               </div>
             </div>
             
-            <div className="filter-actions">
-              <button 
-                className="btn-export"
-                onClick={handleExport}
-                disabled={exportLoading}
-                title="Exportar agenda"
-              >
-                <Download size={14} />
-                {exportLoading ? 'Exportando...' : 'Exportar'}
-              </button>
-              
+            <div className="filter-group">
+              <label>&nbsp;</label>
               <button 
                 className="btn-clear-filters"
                 onClick={() => {
@@ -421,11 +429,24 @@ const Agenda = ({ onStatusUpdate }) => {
                   setSelectedMonth(new Date().getMonth())
                   setSelectedYear(new Date().getFullYear())
                 }}
-                title="Limpiar filtros"
+                title="Limpiar todos los filtros"
               >
                 <X size={14} /> Limpiar
               </button>
             </div>
+            </div>
+          </div>
+          
+          <div className="export-section">
+            <button 
+              className="btn-export"
+              onClick={handleExport}
+              disabled={exportLoading}
+              title="Exportar agenda a CSV"
+            >
+              <Download size={14} />
+              {exportLoading ? 'Exportando...' : 'Exportar CSV'}
+            </button>
           </div>
           
           <div className="calendar-navigation">
@@ -623,6 +644,42 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
     return current >= start && current <= end
   }
   
+  // Forzar recálculo de CSS Grid al montar el componente
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const gridElement = document.querySelector('.calendar-grid')
+      if (gridElement) {
+        gridElement.style.display = 'none'
+        gridElement.offsetHeight // Forzar reflow
+        gridElement.style.display = 'grid'
+        gridElement.style.setProperty('--date-columns', dates.length)
+        gridElement.classList.add('grid-ready')
+      }
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [dates.length])
+  
+  // Touch events no pasivos
+  useEffect(() => {
+    const cells = document.querySelectorAll('.calendar-cell')
+    const handleTouchMoveNonPassive = (e) => {
+      if (isDragging) {
+        e.preventDefault()
+        handleTouchMove(e)
+      }
+    }
+    
+    cells.forEach(cell => {
+      cell.addEventListener('touchmove', handleTouchMoveNonPassive, { passive: false })
+    })
+    
+    return () => {
+      cells.forEach(cell => {
+        cell.removeEventListener('touchmove', handleTouchMoveNonPassive)
+      })
+    }
+  }, [isDragging, handleTouchMove])
+  
   return (
     <div className="calendar-view">
       <div className="calendar-grid" style={{'--date-columns': dates.length}}>
@@ -683,7 +740,7 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
                   onMouseEnter={() => handleMove(cabinName, dateStr)}
                   onMouseUp={handleEnd}
                   onTouchStart={() => !reservation && handleTouchStart(cabinName, dateStr)}
-                  onTouchMove={(e) => e.preventDefault()}
+
                   onTouchEnd={handleTouchEnd}
                   style={{ 
                     cursor: reservation ? 'pointer' : (isDragging ? 'grabbing' : 'grab'),

@@ -13,14 +13,18 @@ const Reservations = () => {
   const [dateFilter, setDateFilter] = useState('all')
   const [customDate, setCustomDate] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [actionLoading, setActionLoading] = useState({})
+  const [searchLoading, setSearchLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage] = useState(10)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [selectedReservation, setSelectedReservation] = useState(null)
   const [paymentAmount, setPaymentAmount] = useState(0)
   const [customTotal, setCustomTotal] = useState(0)
+  const [paymentLoading, setPaymentLoading] = useState(false)
+  const [filtersCollapsed, setFiltersCollapsed] = useState(window.innerWidth <= 991)
 
   const loadReservationsWithFilters = async () => {
     setLoading(true)
@@ -53,7 +57,17 @@ const Reservations = () => {
     }
   }
 
+  // Debounced search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setSearchLoading(true)
+      loadReservationsWithFilters().finally(() => setSearchLoading(false))
+    }, 300)
+    return () => clearTimeout(timeoutId)
+  }, [searchTerm])
+
   const handleStatusUpdate = async (reservationId, newStatus) => {
+    setActionLoading(prev => ({ ...prev, [reservationId]: newStatus }))
     if (newStatus === 'cancelled') {
       const result = await Swal.fire({
         title: '¿Cancelar reservación?',
@@ -67,6 +81,7 @@ const Reservations = () => {
       })
       
       if (!result.isConfirmed) {
+        setActionLoading(prev => ({ ...prev, [reservationId]: false }))
         return
       }
     }
@@ -96,6 +111,8 @@ const Reservations = () => {
       }
     } catch (err) {
       console.error('Error updating status:', err)
+    } finally {
+      setActionLoading(prev => ({ ...prev, [reservationId]: false }))
     }
   }
 
@@ -152,6 +169,7 @@ const Reservations = () => {
   const handlePaymentSave = async () => {
     if (!selectedReservation) return
     
+    setPaymentLoading(true)
     try {
       const token = localStorage.getItem('token')
       const { reservationsAPI } = await import('../../services/api')
@@ -194,6 +212,8 @@ const Reservations = () => {
       }
     } catch (err) {
       console.error('Error updating payment:', err)
+    } finally {
+      setPaymentLoading(false)
     }
   }
 
@@ -217,7 +237,7 @@ const Reservations = () => {
 
   useEffect(() => {
     loadReservationsWithFilters()
-  }, [statusFilter, paymentFilter, bookingTypeFilter, dateFilter, customDate, currentPage])
+  }, [statusFilter, paymentFilter, bookingTypeFilter, dateFilter, customDate, currentPage, itemsPerPage])
 
   useEffect(() => {
     setCurrentPage(1)
@@ -237,86 +257,103 @@ const Reservations = () => {
       </div>
       
       <div className="filters-section">
-        <div className="filter-group search-group">
-          <label>Buscar cliente:</label>
-          <div className="search-input-group">
+        <div className="filters-header">
+          <button 
+            className="filters-toggle"
+            onClick={() => setFiltersCollapsed(!filtersCollapsed)}
+            title={filtersCollapsed ? 'Mostrar filtros' : 'Ocultar filtros'}
+          >
+            <span className={`toggle-icon ${filtersCollapsed ? 'collapsed' : 'expanded'}`}>
+              ▶ 
+            </span>
+          </button>
+          <h4 onClick={() => setFiltersCollapsed(!filtersCollapsed)} style={{cursor: 'pointer', margin: 0}}>Filtros</h4>
+        </div>
+        
+        <div className={`filters-grid ${filtersCollapsed ? 'collapsed' : ''}`}>
+          <div className="filter-group search-group">
+            <label>Búsqueda avanzada:</label>
             <input 
               type="text" 
-              placeholder="Nombre del cliente..."
+              placeholder="Nombre, teléfono, cabaña o ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && loadReservationsWithFilters()}
-              style={{padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px 0 0 4px', minWidth: '150px'}}
+              style={{padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', width: '100%'}}
             />
-            <button 
-              type="button"
-              onClick={loadReservationsWithFilters}
-              style={{padding: '0.5rem 1rem', border: '1px solid #ddd', borderLeft: 'none', borderRadius: '0 4px 4px 0', background: '#f8f9fa', cursor: 'pointer'}}
-            >
-              <Search size={16} />
-            </button>
+
           </div>
-        </div>
-        <div className="filter-group">
-          <label>Estado:</label>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="all">Todos</option>
-            <option value="pending">Pendientes</option>
-            <option value="confirmed">Confirmadas</option>
-            <option value="completed">Completadas</option>
-            <option value="cancelled">Canceladas</option>
-          </select>
-        </div>
-        <div className="filter-group">
-          <label>Pago:</label>
-          <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)}>
-            <option value="all">Todos</option>
-            <option value="pending">Pendiente</option>
-            <option value="partial">Parcial</option>
-            <option value="paid">Pagado</option>
-          </select>
-        </div>
-        <div className="filter-group">
-          <label>Tipo:</label>
-          <select value={bookingTypeFilter} onChange={(e) => setBookingTypeFilter(e.target.value)}>
-            <option value="all">Todos</option>
-            <option value="online">Online</option>
-            <option value="walk_in">Walk-in</option>
-          </select>
-        </div>
-        <div className="filter-group">
-          <label>Fecha:</label>
-          <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
-            <option value="all">Todas</option>
-            <option value="today">Hoy</option>
-            <option value="week">Esta semana</option>
-            <option value="month">Este mes</option>
-            <option value="custom">Fecha específica</option>
-          </select>
-        </div>
-        <div className="filter-group">
-          <label>Seleccionar fecha:</label>
-          <input 
-            type="date" 
-            value={customDate}
-            onChange={(e) => {
-              setCustomDate(e.target.value)
-              if (e.target.value) {
-                setDateFilter('all')
-              }
-            }}
-            style={{padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px'}}
-          />
-        </div>
-        <button 
-          className="btn-clear-filters"
-          onClick={clearFilters}
-          title="Limpiar filtros"
-        >
-          <X size={14} /> Limpiar
-        </button>
-        <div className="filter-stats" style={{flexShrink: 0, whiteSpace: 'nowrap'}}>
-          <span>Mostrando {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, paginationInfo.totalItems || 0)} de {paginationInfo.totalItems || 0}</span>
+          <div className="filter-group filter-status">
+            <label>Estado:</label>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">Todos</option>
+              <option value="pending">Pendientes</option>
+              <option value="confirmed">Confirmadas</option>
+              <option value="completed">Completadas</option>
+              <option value="cancelled">Canceladas</option>
+            </select>
+          </div>
+          <div className="filter-group filter-payment">
+            <label>Pago:</label>
+            <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)}>
+              <option value="all">Todos</option>
+              <option value="pending">Pendiente</option>
+              <option value="partial">Parcial</option>
+              <option value="paid">Pagado</option>
+            </select>
+          </div>
+          <div className="filter-group filter-type">
+            <label>Tipo:</label>
+            <select value={bookingTypeFilter} onChange={(e) => setBookingTypeFilter(e.target.value)}>
+              <option value="all">Todos</option>
+              <option value="online">Online</option>
+              <option value="walk_in">Walk-in</option>
+            </select>
+          </div>
+          <div className="filter-group filter-date">
+            <label>Fecha:</label>
+            <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
+              <option value="all">Todas</option>
+              <option value="today">Hoy</option>
+              <option value="week">Esta semana</option>
+              <option value="month">Este mes</option>
+              <option value="custom">Fecha específica</option>
+            </select>
+          </div>
+          <div className="filter-group filter-date-input">
+            <label>Seleccionar fecha:</label>
+            <input 
+              type="date" 
+              value={customDate}
+              onChange={(e) => {
+                setCustomDate(e.target.value)
+                if (e.target.value) {
+                  setDateFilter('all')
+                }
+              }}
+              style={{padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px'}}
+            />
+          </div>
+          <button 
+            className="btn-clear-filters filter-clear"
+            onClick={clearFilters}
+            title="Limpiar filtros"
+          >
+            <X size={14} /> Limpiar
+          </button>
+          <div className="filter-group filter-items">
+            <label>Por página:</label>
+            <select value={itemsPerPage} onChange={(e) => {
+              setItemsPerPage(parseInt(e.target.value))
+              setCurrentPage(1)
+            }}>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+          <div className="filter-stats" style={{flexShrink: 0, whiteSpace: 'nowrap'}}>
+            <span>Mostrando {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, paginationInfo.totalItems || 0)} de {paginationInfo.totalItems || 0}</span>
+          </div>
         </div>
       </div>
 
@@ -407,16 +444,24 @@ const Reservations = () => {
                             <button 
                               className="confirm-btn"
                               onClick={() => handleStatusUpdate(reservation.id, 'confirmed')}
+                              disabled={actionLoading[reservation.id]}
                               title="Confirmar"
                             >
-                              <CheckCircle size={14} />
+                              {actionLoading[reservation.id] === 'confirmed' ? 
+                                <div className="button-spinner"></div> : 
+                                <CheckCircle size={14} />
+                              }
                             </button>
                             <button 
                               className="cancel-btn"
                               onClick={() => handleStatusUpdate(reservation.id, 'cancelled')}
+                              disabled={actionLoading[reservation.id]}
                               title="Cancelar"
                             >
-                              <X size={14} />
+                              {actionLoading[reservation.id] === 'cancelled' ? 
+                                <div className="button-spinner"></div> : 
+                                <X size={14} />
+                              }
                             </button>
                           </>
                         )}
@@ -424,9 +469,13 @@ const Reservations = () => {
                           <button 
                             className="cancel-btn"
                             onClick={() => handleStatusUpdate(reservation.id, 'cancelled')}
+                            disabled={actionLoading[reservation.id]}
                             title="Cancelar"
                           >
-                            <X size={14} />
+                            {actionLoading[reservation.id] === 'cancelled' ? 
+                              <div className="button-spinner"></div> : 
+                              <X size={14} />
+                            }
                           </button>
                         )}
                       </div>
@@ -577,8 +626,8 @@ const Reservations = () => {
                 <button className="btn-secondary" onClick={closePaymentModal}>
                   Cancelar
                 </button>
-                <button className="btn-primary" onClick={handlePaymentSave}>
-                  Actualizar
+                <button className="btn-primary" onClick={handlePaymentSave} disabled={paymentLoading}>
+                  {paymentLoading ? <div className="button-spinner"></div> : 'Actualizar'}
                 </button>
               </div>
             </div>
@@ -589,7 +638,6 @@ const Reservations = () => {
   )
 }
 
-// Componente para formulario de reservaciones (Walk-in)
 const ReservationForm = ({ onClose, onSave }) => {
   const [formData, setFormData] = useState({
     cabin_id: '',

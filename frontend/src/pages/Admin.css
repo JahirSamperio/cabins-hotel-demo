@@ -41,6 +41,24 @@
   background: var(--white);
   border-bottom: 1px solid rgba(44, 85, 48, 0.1);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+@media (min-width: 769px) {
+  .admin-panel-tabs {
+    overflow: visible;
+  }
+  
+  .tabs-scroll-container {
+    display: flex;
+    overflow: visible;
+    width: 100%;
+  }
+  
+  .tab-btn {
+    flex: 1;
+  }
 }
 
 .tab-btn {
@@ -1672,30 +1690,139 @@
 
 @media (max-width: 768px) {
   .admin-panel-header {
-    flex-direction: column;
-    gap: 1.5rem;
-    text-align: center;
-    padding: 1.5rem;
+    padding: 0.75rem 1rem;
+    min-height: auto;
+  }
+  
+  .admin-info h2 {
+    font-size: 1.2rem;
+    margin: 0;
+  }
+  
+  .admin-info p {
+    font-size: 0.8rem;
+    margin: 0;
+    opacity: 0.8;
   }
   
   .header-actions {
-    flex-direction: row;
-    justify-content: center;
+    gap: 0.5rem;
+  }
+  
+  .btn-home, .btn-logout {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    border-radius: 6px;
+  }
+  
+  .btn-home span, .btn-logout span {
+    display: none;
   }
   
   .admin-panel-tabs {
-    flex-wrap: wrap;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding: 0 0.5rem;
+    gap: 0.25rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-behavior: smooth;
+    position: relative;
+  }
+  
+  .admin-panel-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .tabs-scroll-container {
+    display: flex;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding: 0 0.5rem;
+    gap: 0.25rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-behavior: smooth;
+  }
+  
+  @media (min-width: 769px) {
+    .tabs-scroll-container {
+      overflow-x: visible;
+      justify-content: center;
+    }
+    
+    .admin-panel-tabs::before,
+    .admin-panel-tabs::after {
+      display: none;
+    }
+  }
+  
+  .tabs-scroll-container::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .admin-panel-tabs::before {
+    content: '←';
+    position: absolute;
+    left: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.95);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.9rem;
+    color: #666;
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  
+  .admin-panel-tabs::after {
+    content: '→';
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.95);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.9rem;
+    color: #666;
+    pointer-events: none;
+    z-index: 10;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  
+  .admin-panel-tabs.at-start::before {
+    opacity: 0;
+  }
+  
+  .admin-panel-tabs.scrolled::before {
+    opacity: 1;
+  }
+  
+  .admin-panel-tabs.at-end::after {
+    opacity: 0;
   }
   
   .tab-btn {
-    flex: 1;
-    min-width: 120px;
-    padding: 1rem 0.5rem;
-    font-size: 0.85rem;
+    flex: 0 0 auto;
+    min-width: 90px;
+    padding: 0.75rem 0.75rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+  
+  .tab-btn svg {
+    display: none;
   }
   
   .admin-panel-body {
-    padding: 1.5rem;
+    padding: 0.75rem;
   }
   
   .stats-grid {
@@ -1751,5 +1878,432 @@
   .booking-preview {
     grid-template-columns: 1fr;
     text-align: center;
+  }
+}
+/* Touch-friendly buttons */
+@media (max-width: 767px) {
+  .action-buttons button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.75rem;
+  }
+}
+
+/* Filters responsive grid */
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+@media (max-width: 991px) {
+  .filters-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Modal responsive */
+@media (max-width: 767px) {
+  .modal-content {
+    width: 95vw;
+    max-height: 90vh;
+    margin: 5vh auto;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+  }
+}
+/* Action buttons alignment and symmetry */
+.action-buttons {
+  display: flex;
+  gap: 0.25rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.action-buttons button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+@media (max-width: 767px) {
+  .action-buttons button {
+    width: 44px;
+    height: 44px;
+  }
+}
+/* WhatsApp icon alignment fix */
+.whatsapp-btn svg {
+  transform: translateY(-1px);
+}
+/* WhatsApp icon alignment fix */
+.whatsapp-btn svg {
+  transform: translateY(-3px);
+}
+/* WhatsApp button alignment fix */
+.whatsapp-btn {
+  align-self: flex-start;
+  transform: translateY(-2px);
+}
+/* WhatsApp button alignment fix */
+.whatsapp-btn {
+  transform: translateY(-4px);
+}
+/* WhatsApp icon centering */
+.whatsapp-btn svg {
+  display: block;
+  margin: auto;
+}
+/* WhatsApp icon fine adjustment */
+.whatsapp-btn svg {
+  transform: translateY(1px);
+}
+/* WhatsApp icon position adjustment */
+.whatsapp-btn svg {
+  transform: translateY(0px);
+}
+/* Edit button color change */
+.edit-btn {
+  background: #6c757d;
+  color: white;
+}
+
+.edit-btn:hover {
+  background: #5a6268;
+}
+/* Edit button blue color */
+.edit-btn {
+  background: #007bff;
+  color: white;
+}
+
+.edit-btn:hover {
+  background: #0056b3;
+}
+/* Edit button harmonious blue */
+.edit-btn {
+  background: #2c5f85;
+  color: white;
+}
+
+.edit-btn:hover {
+  background: #1e4a6b;
+}
+/* Larger icons on mobile */
+@media (max-width: 767px) {
+  .action-buttons button svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+/* Button spinners for actions */
+.button-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+.confirm-btn .button-spinner,
+.cancel-btn .button-spinner,
+.edit-btn .button-spinner,
+.whatsapp-btn .button-spinner {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+/* Filters responsive order and layout */
+.filters-grid {
+  display: grid;
+  gap: 1rem;
+  align-items: end;
+}
+
+/* Desktop (1200px+) - 4 columns */
+@media (min-width: 1200px) {
+  .filters-grid {
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+    grid-template-areas: 
+      "search status payment type date dateInput clear items stats";
+  }
+  
+  .search-group { grid-area: search; }
+  .filter-status { grid-area: status; }
+  .filter-payment { grid-area: payment; }
+  .filter-type { grid-area: type; }
+  .filter-date { grid-area: date; }
+  .filter-date-input { grid-area: dateInput; }
+  .filter-clear { grid-area: clear; }
+  .filter-items { grid-area: items; }
+  .filter-stats { grid-area: stats; }
+}
+
+/* Laptop (992-1199px) - 3 columns */
+@media (min-width: 992px) and (max-width: 1199px) {
+  .filters-grid {
+    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-areas: 
+      "search status payment"
+      "type date dateInput"
+      "clear items stats";
+  }
+}
+
+/* Tablet (768-991px) - 2 columns */
+@media (min-width: 768px) and (max-width: 991px) {
+  .filters-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: 
+      "search search"
+      "status payment"
+      "type date"
+      "dateInput clear"
+      "items stats";
+  }
+}
+
+/* Mobile (< 768px) - 1 column */
+@media (max-width: 767px) {
+  .filters-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas: 
+      "search"
+      "status"
+      "payment"
+      "type"
+      "date"
+      "dateInput"
+      "items"
+      "clear"
+      "stats";
+  }
+}
+/* Fix tablet alignment 700-800px */
+@media (min-width: 700px) and (max-width: 800px) {
+  .filters-grid {
+    justify-items: center;
+    grid-template-columns: 1fr 1fr;
+    max-width: 100%;
+  }
+  
+  .filter-group {
+    width: 100%;
+    max-width: 200px;
+  }
+  
+  .search-group {
+    max-width: 100%;
+  }
+}
+/* Fix tablet alignment 700-800px - centered filters */
+@media (min-width: 700px) and (max-width: 800px) {
+  .filters-grid {
+    justify-content: center;
+    grid-template-columns: repeat(2, minmax(0, 250px));
+    gap: 1rem;
+  }
+  
+  .search-group {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+  }
+}
+/* Force center all filters 700-800px */
+@media (min-width: 700px) and (max-width: 800px) {
+  .filters-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .filter-group {
+    width: 250px;
+    text-align: center;
+  }
+  
+  .search-group {
+    width: 100%;
+    max-width: 400px;
+  }
+}
+/* Organize filters 800-1000px like laptop layout */
+@media (min-width: 800px) and (max-width: 1000px) {
+  .filters-grid {
+    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-areas: 
+      "search status payment"
+      "type date dateInput"
+      "clear items stats";
+  }
+}
+/* Fix alignment 800-900px */
+@media (min-width: 800px) and (max-width: 900px) {
+  .filters-grid {
+    justify-content: center;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+}
+/* Center filters 800-900px */
+@media (min-width: 800px) and (max-width: 900px) {
+  .filters-grid {
+    justify-content: center;
+    justify-items: center;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+  
+  .filter-group {
+    text-align: center;
+  }
+}
+/* Force center 800-900px with flexbox */
+@media (min-width: 800px) and (max-width: 900px) {
+  .filters-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .filters-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    max-width: 600px;
+  }
+  
+  .filter-group {
+    width: 250px;
+    text-align: center;
+  }
+  
+  .search-group {
+    width: 100%;
+    max-width: 400px;
+  }
+}
+/* Advanced search styling */
+.search-group small {
+  color: #666;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: block;
+  line-height: 1.2;
+}
+
+@media (max-width: 767px) {
+  .search-group small {
+    font-size: 0.75rem;
+  }
+}
+/* Fix search icon overlap on mobile */
+@media (max-width: 767px) {
+  .search-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .search-input-group input {
+    border-radius: 4px !important;
+    min-width: 100% !important;
+  }
+  
+  .search-input-group button {
+    border-radius: 4px !important;
+    border-left: 1px solid #ddd !important;
+    align-self: flex-start;
+    width: auto;
+  }
+}
+/* Fix search icon overlap on tablets 600-770px */
+@media (min-width: 600px) and (max-width: 770px) {
+  .search-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .search-input-group input {
+    border-radius: 4px !important;
+    min-width: 100% !important;
+  }
+  
+  .search-input-group button {
+    border-radius: 4px !important;
+    border-left: 1px solid #ddd !important;
+    align-self: flex-start;
+    width: auto;
+  }
+}
+/* Prevent search icon overlap in input */
+.search-input-group input {
+  padding-left: 0.5rem !important;
+  background-position: left 0.5rem center;
+  background-repeat: no-repeat;
+}
+/* Keep search button attached to input */
+.search-input-group {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 0 !important;
+}
+
+.search-input-group input {
+  border-radius: 4px 0 0 4px !important;
+  border-right: none !important;
+}
+
+.search-input-group button {
+  border-radius: 0 4px 4px 0 !important;
+  border-left: none !important;
+  flex-shrink: 0 !important;
+}
+/* Maintain spacing between search and other filters */
+.search-group {
+  margin-right: 1rem;
+}
+
+@media (max-width: 767px) {
+  .search-group {
+    margin-right: 0;
+    margin-bottom: 1rem;
+  }
+}
+/* Fix search input on mobile */
+@media (max-width: 767px) {
+  .search-input-group {
+    width: 100%;
+  }
+  
+  .search-input-group input {
+    flex: 1;
+    min-width: 0;
   }
 }

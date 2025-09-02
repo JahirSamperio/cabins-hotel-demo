@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { 
   BarChart3, Calendar, Home, LogOut, Building, Star, DollarSign 
 } from 'lucide-react'
@@ -14,6 +15,27 @@ export const AdminLayout = ({ children }) => {
     logout()
     navigate('/')
   }
+
+  useEffect(() => {
+    const scrollContainer = document.querySelector('.tabs-scroll-container')
+    const tabsContainer = document.querySelector('.admin-panel-tabs')
+    if (!scrollContainer || !tabsContainer) return
+
+    const handleScroll = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainer
+      const isAtStart = scrollLeft <= 5
+      const isAtEnd = scrollLeft + clientWidth >= scrollWidth - 5
+      
+      tabsContainer.classList.toggle('at-start', isAtStart)
+      tabsContainer.classList.toggle('scrolled', !isAtStart)
+      tabsContainer.classList.toggle('at-end', isAtEnd)
+    }
+
+    scrollContainer.addEventListener('scroll', handleScroll)
+    handleScroll() // Check initial state
+
+    return () => scrollContainer.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -33,30 +55,32 @@ export const AdminLayout = ({ children }) => {
             <p>Bienvenido, {user?.name}</p>
           </div>
           <div className="header-actions">
-            <button className="btn-home" onClick={() => navigate('/')}>
+            <button className="btn-home" onClick={() => navigate('/')} title="Sitio Web">
               <Home size={16} />
-              Sitio Web
+              <span>Sitio Web</span>
             </button>
-            <button className="btn-logout" onClick={handleLogout}>
+            <button className="btn-logout" onClick={handleLogout} title="Cerrar Sesión">
               <LogOut size={16} />
-              Cerrar Sesión
+              <span>Cerrar Sesión</span>
             </button>
           </div>
         </div>
 
         <div className="admin-panel-tabs">
-          {tabs.map(tab => {
-            const Icon = tab.icon
-            return (
-              <button 
-                key={tab.id}
-                className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                <Icon size={16} /> {tab.label}
-              </button>
-            )
-          })}
+          <div className="tabs-scroll-container">
+            {tabs.map(tab => {
+              const Icon = tab.icon
+              return (
+                <button 
+                  key={tab.id}
+                  className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  <Icon size={16} /> <span>{tab.label}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <div className="admin-panel-body">

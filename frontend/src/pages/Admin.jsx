@@ -12,9 +12,7 @@ import FinancialDashboard from '../components/admin/FinancialDashboard'
 const Admin = () => {
   const navigate = useNavigate()
   const { user, isAuthenticated } = useAuthStore()
-  const { activeTab, reservations, setReservations } = useAdminStore()
-
-
+  const { activeTab, reservations, setReservations, setActiveTab } = useAdminStore()
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -26,7 +24,10 @@ const Admin = () => {
       navigate('/dashboard')
       return
     }
-  }, [navigate, isAuthenticated, user])
+    
+    // Establecer dashboard como tab activo al acceder
+    setActiveTab('dashboard')
+  }, [navigate, isAuthenticated, user, setActiveTab])
 
 
 
