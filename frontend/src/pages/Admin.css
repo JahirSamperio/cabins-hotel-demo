@@ -2307,3 +2307,41 @@
     min-width: 0;
   }
 }
+/* Table header controls */
+.table-header-controls {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0 0.5rem;
+}
+
+.items-per-page {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.items-per-page label {
+  font-weight: 500;
+}
+
+.items-per-page select {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: white;
+}
+
+@media (max-width: 767px) {
+  .table-header-controls {
+    justify-content: center;
+  }
+  
+  .items-per-page {
+    font-size: 0.85rem;
+  }
+}

@@ -340,17 +340,7 @@ const Reservations = () => {
           >
             <X size={14} /> Limpiar
           </button>
-          <div className="filter-group filter-items">
-            <label>Por página:</label>
-            <select value={itemsPerPage} onChange={(e) => {
-              setItemsPerPage(parseInt(e.target.value))
-              setCurrentPage(1)
-            }}>
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-            </select>
-          </div>
+
           <div className="filter-stats" style={{flexShrink: 0, whiteSpace: 'nowrap'}}>
             <span>Mostrando {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, paginationInfo.totalItems || 0)} de {paginationInfo.totalItems || 0}</span>
           </div>
@@ -366,6 +356,20 @@ const Reservations = () => {
 
       {!loading && filteredReservations.length > 0 ? (
         <>
+          <div className="table-header-controls">
+            <div className="items-per-page">
+              <label>Mostrar:</label>
+              <select value={itemsPerPage} onChange={(e) => {
+                setItemsPerPage(parseInt(e.target.value))
+                setCurrentPage(1)
+              }}>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+              <span>por página</span>
+            </div>
+          </div>
           <div className="reservations-table-container">
             <table className="reservations-table">
               <thead>
