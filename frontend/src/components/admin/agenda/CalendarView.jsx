@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 
 const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', selectedMonth, selectedYear, onReservationClick, onNewReservation }) => {
   const today = new Date()
@@ -25,7 +25,9 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
     return { filteredCabins: filtered }
   }, [reservations, cabinFilter])
   
-  const cabins = filteredCabins
+  // Agregar fila de Reservación Rápida al inicio
+  const quickReserveRow = 'Reservación Rápida'
+  const cabins = [quickReserveRow, ...filteredCabins]
   
   const reservationMap = useMemo(() => {
     const map = new Map()
@@ -88,7 +90,9 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
       const checkIn = startDate <= endDate ? dragStart : dragEnd
       const checkOut = startDate <= endDate ? dragEnd : dragStart
       
-      onNewReservation && onNewReservation(selectedCabin, checkIn, checkOut)
+      // Si es reservación rápida, pasar cabaña vacía para que el modal permita selección
+      const cabinName = selectedCabin === quickReserveRow ? '' : selectedCabin
+      onNewReservation && onNewReservation(cabinName, checkIn, checkOut)
     }
     setIsDragging(false)
     setDragStart(null)
@@ -103,25 +107,54 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
     const current = new Date(dateStr)
     return current >= start && current <= end
   }
-  
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const gridElement = document.querySelector('.calendar-grid')
-      if (gridElement) {
-        gridElement.style.display = 'none'
-        gridElement.offsetHeight
-        gridElement.style.display = 'grid'
-        gridElement.style.setProperty('--date-columns', dates.length)
-        gridElement.classList.add('grid-ready')
-      }
-    }, 100)
-    return () => clearTimeout(timer)
-  }, [dates.length])
-  
+
+  // Calcular responsive columns con JavaScript
+  const getResponsiveColumns = () => {
+    if (typeof window === 'undefined') return `160px repeat(${dates.length}, minmax(80px, 1fr))`
+    
+    const width = window.innerWidth
+    
+    if (width <= 480) {
+      return `80px repeat(${dates.length}, 35px)`
+    } else if (width <= 767) {
+      return `100px repeat(${dates.length}, 50px)`
+    } else if (width <= 900) {
+      return `100px repeat(${dates.length}, 50px)`
+    } else if (width <= 1200) {
+      return `120px repeat(${dates.length}, minmax(60px, 1fr))`
+    } else if (width <= 1400) {
+      return `140px repeat(${dates.length}, minmax(70px, 1fr))`
+    } else {
+      return `160px repeat(${dates.length}, minmax(80px, 1fr))`
+    }
+  }
+
+  // NO RENDERIZAR hasta que tengamos las fechas
+  if (!dates.length) {
+    return (
+      <div className="calendar-view" style={{ minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="loading">
+          <div className="spinner"></div>
+          <span>Cargando calendario...</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="calendar-view">
-      <div className="calendar-grid" style={{'--date-columns': dates.length}}>
-        <div className="calendar-header">
+      <div className="calendar-table-wrapper">
+        {/* HEADER ROW - Separado del grid */}
+        <div 
+          className="calendar-header-row"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: getResponsiveColumns(),
+            gap: '1px',
+            background: '#e0e0e0',
+            marginBottom: '1px'
+          }}
+        >
           <div className="cabin-header">
             <span>Cabañas</span>
           </div>
@@ -129,7 +162,7 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
             const formatted = formatDate(date)
             const isToday = date.toISOString().split('T')[0] === today.toISOString().split('T')[0]
             return (
-              <div key={date.toISOString()} className={`date-header ${isToday ? 'today-header' : ''}`}>
+              <div key={`header-${date.toISOString()}`} className={`date-header ${isToday ? 'today-header' : ''}`}>
                 <div className="date-day-name">{formatted.day}</div>
                 <div className="date-number">{formatted.date}</div>
                 <div className="date-month">{formatted.month}</div>
@@ -137,99 +170,146 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
             )
           })}
         </div>
-        
-        {cabins.map(cabinName => (
-          <div key={cabinName} className="calendar-row">
-            <div className="cabin-name">{cabinName}</div>
-            {dates.map(date => {
-              const reservation = getReservationForCabinAndDate(cabinName, date)
-              const dateStr = date.toISOString().split('T')[0]
-              const isToday = dateStr === today.toISOString().split('T')[0]
-              
-              let borderClass = ''
-              if (reservation) {
-                const isCheckIn = reservation.check_in === dateStr
-                const isCheckOut = reservation.check_out === dateStr
-                const isMiddle = dateStr > reservation.check_in && dateStr < reservation.check_out
+
+        {/* BODY ROWS - Grid separado para cada fila */}
+        <div className="calendar-body">
+          {cabins.map((cabinName, cabinIndex) => (
+            <div 
+              key={`cabin-${cabinName}`}
+              className="cabin-row"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: getResponsiveColumns(),
+                gap: '1px',
+                background: '#e0e0e0',
+                marginBottom: cabinIndex < cabins.length - 1 ? '1px' : '0'
+              }}
+            >
+              <div className={`calendar-cabin-name ${cabinName === quickReserveRow ? 'quick-reserve-row' : ''}`}>
+                {cabinName}
+              </div>
+              {dates.map(date => {
+                const reservation = getReservationForCabinAndDate(cabinName, date)
+                const dateStr = date.toISOString().split('T')[0]
+                const isToday = dateStr === today.toISOString().split('T')[0]
                 
-                if (isCheckIn && isCheckOut) {
-                  borderClass = 'single-day'
-                } else if (isCheckIn) {
-                  borderClass = 'range-start'
-                } else if (isCheckOut) {
-                  borderClass = 'range-end'
-                } else if (isMiddle) {
-                  borderClass = 'range-middle'
+                let borderClass = ''
+                if (reservation) {
+                  const isCheckIn = reservation.check_in === dateStr
+                  const isCheckOut = reservation.check_out === dateStr
+                  const isMiddle = dateStr > reservation.check_in && dateStr < reservation.check_out
+                  
+                  if (isCheckIn && isCheckOut) {
+                    borderClass = 'single-day'
+                  } else if (isCheckIn) {
+                    borderClass = 'range-start'
+                  } else if (isCheckOut) {
+                    borderClass = 'range-end'
+                  } else if (isMiddle) {
+                    borderClass = 'range-middle'
+                  }
                 }
-              }
-              
-              return (
-                <div 
-                  key={date.toISOString()} 
-                  className={`calendar-cell ${
-                    reservation ? 'occupied' : 'available'
-                  } ${isToday ? 'today' : ''} ${borderClass} ${
-                    reservation ? `status-${reservation.status}` : ''
-                  } ${isInDragRange(cabinName, dateStr) ? 'drag-selected' : ''}`}
-                  data-cabin={cabinName}
-                  data-date={dateStr}
-                  onClick={() => reservation && onReservationClick && onReservationClick(reservation)}
-                  onMouseDown={() => !reservation && handleStart(cabinName, dateStr)}
-                  onMouseEnter={() => handleMove(cabinName, dateStr)}
-                  onMouseUp={handleEnd}
-                  style={{ 
-                    cursor: reservation ? 'pointer' : (isDragging ? 'grabbing' : 'grab'),
-                    backgroundColor: reservation ? getStatusColor(reservation.status) : undefined,
-                    userSelect: 'none',
-                    touchAction: 'none'
-                  }}
-                >
-                  {reservation ? (
-                    <div 
-                      className="reservation-info"
-                      title={`${reservation.guest_name || reservation.user?.name || 'Huésped'}
-${reservation.guests} huésped${reservation.guests > 1 ? 'es' : ''}
-${reservation.check_in} - ${reservation.check_out}
-${reservation.includes_breakfast ? 'Con desayunador' : 'Sin desayunador'}
-$${reservation.total_price} (${reservation.payment_status === 'pending' ? 'Sin pagar' : reservation.payment_status === 'paid' ? 'Pagado' : 'Pago parcial'})
-${reservation.guest_phone || reservation.user?.phone || 'Sin teléfono'}`}
-                    >
-                      <div className="guest-name">
-                        {reservation.check_in === dateStr && (
-                          <span className={`payment-dot payment-${reservation.payment_status}`}></span>
-                        )}
-                        {(() => {
-                          const checkIn = new Date(reservation.check_in)
-                          const checkOut = new Date(reservation.check_out)
-                          const totalDays = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24))
-                          const middleDay = Math.floor(totalDays / 2)
-                          const currentDay = Math.ceil((new Date(dateStr) - checkIn) / (1000 * 60 * 60 * 24))
-                          return currentDay === middleDay ? (reservation.guest_name || reservation.user?.name || 'Huésped') : ''
-                        })()}
-                      </div>
-                      <div className="reservation-dates">
-                        {reservation.check_in === dateStr ? 'IN' : ''}
-                        {reservation.check_out === dateStr ? 'OUT' : ''}
-                      </div>
-                    </div>
-                  ) : (
-                    dateStr >= today.toISOString().split('T')[0] && (
-                      <button 
-                        className="add-reservation-btn"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onNewReservation && onNewReservation(cabinName, dateStr)
-                        }}
+                
+                // Lógica especial para fila de reservación rápida
+                const isQuickReserve = cabinName === quickReserveRow
+                const cellReservation = isQuickReserve ? null : reservation
+                
+                return (
+                  <div 
+                    key={`${cabinName}-${date.toISOString()}`} 
+                    className={`calendar-cell ${
+                      cellReservation ? 'occupied' : 'available'
+                    } ${isToday ? 'today' : ''} ${borderClass} ${
+                      cellReservation ? `status-${cellReservation.status}` : ''
+                    } ${isInDragRange(cabinName, dateStr) ? 'drag-selected' : ''} ${
+                      isQuickReserve ? 'quick-reserve-cell' : ''
+                    }`}
+                    data-cabin={cabinName}
+                    data-date={dateStr}
+                    onClick={() => cellReservation && onReservationClick && onReservationClick(cellReservation)}
+                    onMouseDown={() => {
+                      if (isQuickReserve || !cellReservation) {
+                        handleStart(cabinName, dateStr)
+                      }
+                    }}
+                    onMouseEnter={() => handleMove(cabinName, dateStr)}
+                    onMouseUp={handleEnd}
+                    onTouchStart={(e) => {
+                      if (isQuickReserve || !cellReservation) {
+                        e.preventDefault()
+                        handleStart(cabinName, dateStr)
+                      }
+                    }}
+                    onTouchMove={(e) => {
+                      if (isDragging) {
+                        e.preventDefault()
+                        const touch = e.touches[0]
+                        const element = document.elementFromPoint(touch.clientX, touch.clientY)
+                        if (element && element.dataset.cabin && element.dataset.date) {
+                          handleMove(element.dataset.cabin, element.dataset.date)
+                        }
+                      }
+                    }}
+                    onTouchEnd={(e) => {
+                      if (isDragging) {
+                        e.preventDefault()
+                        handleEnd()
+                      }
+                    }}
+                    style={{ 
+                      cursor: cellReservation ? 'pointer' : (isDragging ? 'grabbing' : 'grab'),
+                      backgroundColor: cellReservation ? getStatusColor(cellReservation.status) : undefined,
+                      userSelect: 'none',
+                      touchAction: 'none'
+                    }}
+                  >
+                    {cellReservation ? (
+                      <div 
+                        className="reservation-info"
+                        title={`${cellReservation.guest_name || cellReservation.user?.name || 'Huésped'}
+${cellReservation.guests} huésped${cellReservation.guests > 1 ? 'es' : ''}
+${cellReservation.check_in} - ${cellReservation.check_out}
+${cellReservation.includes_breakfast ? 'Con desayunador' : 'Sin desayunador'}
+$${cellReservation.total_price} (${cellReservation.payment_status === 'pending' ? 'Sin pagar' : cellReservation.payment_status === 'paid' ? 'Pagado' : 'Pago parcial'})
+${cellReservation.guest_phone || cellReservation.user?.phone || 'Sin teléfono'}`}
                       >
-                        +
-                      </button>
-                    )
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        ))}
+                        <div className="guest-name">
+                          {cellReservation.check_in === dateStr && (
+                            <span className={`payment-dot payment-${cellReservation.payment_status}`}></span>
+                          )}
+                          {(() => {
+                            const checkIn = new Date(cellReservation.check_in)
+                            const checkOut = new Date(cellReservation.check_out)
+                            const totalDays = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24))
+                            const middleDay = Math.floor(totalDays / 2)
+                            const currentDay = Math.ceil((new Date(dateStr) - checkIn) / (1000 * 60 * 60 * 24))
+                            return currentDay === middleDay ? (cellReservation.guest_name || cellReservation.user?.name || 'Huésped') : ''
+                          })()}
+                        </div>
+                        <div className="reservation-dates">
+                          {cellReservation.check_in === dateStr ? 'IN' : ''}
+                          {cellReservation.check_out === dateStr ? 'OUT' : ''}
+                        </div>
+                      </div>
+                    ) : (
+                      dateStr >= today.toISOString().split('T')[0] && (
+                        <button 
+                          className="add-reservation-btn"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onNewReservation && onNewReservation(cabinName, dateStr)
+                          }}
+                        >
+                          +
+                        </button>
+                      )
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Star, CheckCircle, X } from 'lucide-react'
 import '../../pages/Admin.css'
 import '../../styles/AdminDesignSystem.css'
@@ -24,7 +24,7 @@ const Reviews = () => {
     }
   }
 
-  const handleReviewAction = async (reviewId, action) => {
+  const handleReviewAction = useCallback(async (reviewId, action) => {
     try {
       const token = localStorage.getItem('token')
       const { reviewsAPI } = await import('../../services/api')
@@ -39,7 +39,7 @@ const Reviews = () => {
     } catch (err) {
       console.error('Error handling review:', err)
     }
-  }
+  }, [])
 
   useEffect(() => {
     loadReviews()

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Users, DollarSign, Edit, Eye, Trash2, Plus, Building, X, Search, Filter } from 'lucide-react'
 import Swal from 'sweetalert2'
 import '../../pages/Admin.css'
@@ -71,17 +71,20 @@ const Cabins = () => {
     setCurrentPage(1)
   }, [cabins, searchTerm, capacityFilter, priceFilter])
 
-  // Pagination
-  const totalPages = Math.ceil(filteredCabins.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedCabins = filteredCabins.slice(startIndex, startIndex + itemsPerPage)
+  // Memoizar paginación
+  const paginationData = useMemo(() => {
+    const totalPages = Math.ceil(filteredCabins.length / itemsPerPage)
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const paginatedCabins = filteredCabins.slice(startIndex, startIndex + itemsPerPage)
+    return { totalPages, paginatedCabins }
+  }, [filteredCabins, currentPage, itemsPerPage])
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setSearchTerm('')
     setCapacityFilter('all')
     setPriceFilter('all')
     setCurrentPage(1)
-  }
+  }, [])
 
   const handleDeleteItem = async (id) => {
     const result = await Swal.fire({
@@ -131,17 +134,17 @@ const Cabins = () => {
     }
   }
 
-  const openModal = (type, item = null) => {
+  const openModal = useCallback((type, item = null) => {
     setModalType(type)
     setSelectedItem(item)
     setShowModal(true)
-  }
+  }, [])
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setShowModal(false)
     setModalType('')
     setSelectedItem(null)
-  }
+  }, [])
 
   const handleSave = () => {
     closeModal()
@@ -236,13 +239,13 @@ const Cabins = () => {
       {!loading && filteredCabins.length > 0 ? (
         <>
           <div className="cabins-list">
-            {paginatedCabins.map(cabin => (
+            {paginationData.paginatedCabins.map(cabin => (
               <CabinListItem key={cabin.id} cabin={cabin} onEdit={() => openModal('cabin', cabin)} onView={() => openModal('view-cabin', cabin)} onDelete={() => handleDeleteItem(cabin.id)} />
             ))}
           </div>
           
           {/* Pagination */}
-          {totalPages > 1 && (
+          {paginationData.totalPages > 1 && (
             <div className="admin-pagination">
               <button 
                 className="admin-pagination-btn"
@@ -252,9 +255,9 @@ const Cabins = () => {
                 ← Anterior
               </button>
               
-              {[...Array(totalPages)].map((_, index) => {
+              {[...Array(paginationData.totalPages)].map((_, index) => {
                 const page = index + 1
-                if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
+                if (page === 1 || page === paginationData.totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
                   return (
                     <button
                       key={page}
@@ -272,8 +275,8 @@ const Cabins = () => {
               
               <button 
                 className="admin-pagination-btn"
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, paginationData.totalPages))}
+                disabled={currentPage === paginationData.totalPages}
               >
                 Siguiente →
               </button>

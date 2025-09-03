@@ -28,6 +28,13 @@ export const useAuthStore = create((set) => ({
     localStorage.setItem('user', JSON.stringify(user))
     localStorage.setItem('token', token)
     set({ user, token, isAuthenticated: true, isLoading: false })
+    
+    // Refresh automático si es admin
+    if (user?.is_admin) {
+      setTimeout(() => {
+        window.location.reload()
+      }, 100)
+    }
   },
   
   logout: () => {

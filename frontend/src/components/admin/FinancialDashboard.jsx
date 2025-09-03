@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { 
   DollarSign, TrendingUp, TrendingDown, Calendar,
   Users, CreditCard, AlertTriangle, CheckCircle,
@@ -139,12 +139,15 @@ const FinancialDashboard = () => {
     }
   }
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-MX', {
+  // Memoizar formateador de moneda
+  const currencyFormatter = useMemo(() => 
+    new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN'
-    }).format(amount || 0)
-  }
+    }), []
+  )
+
+  const formatCurrency = (amount) => currencyFormatter.format(amount || 0)
 
   const getPaymentStatusColor = (paid, total) => {
     const percentage = (paid / total) * 100

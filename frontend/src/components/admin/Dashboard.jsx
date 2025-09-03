@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { 
   DollarSign, Calendar, Building, Star, 
   TrendingUp, TrendingDown, AlertCircle, 
@@ -59,12 +59,25 @@ const Dashboard = () => {
     }
   }
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-MX', {
+  // Memoizar formateador de moneda
+  const currencyFormatter = useMemo(() => 
+    new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN'
-    }).format(amount || 0)
-  }
+    }), []
+  )
+
+  const formatCurrency = (amount) => currencyFormatter.format(amount || 0)
+
+  // Memoizar fecha de hoy
+  const todayFormatted = useMemo(() => 
+    new Date().toLocaleDateString('es-MX', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }), []
+  )
 
   const getTrendIcon = (change) => {
     if (change > 0) return <TrendingUp size={16} className="trend-up" />
@@ -169,12 +182,7 @@ const Dashboard = () => {
 
       {/* Métricas de Hoy */}
       <div className="today-metrics">
-        <h4>Actividad de Hoy - {new Date().toLocaleDateString('es-MX', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
-        })}</h4>
+        <h4>Actividad de Hoy - {todayFormatted}</h4>
         <div className="today-grid">
           <div className="today-card checkins">
             <CheckCircle size={20} />
@@ -252,27 +260,33 @@ const Dashboard = () => {
               
               return (
                 <div key={booking.id} className="booking-item">
-                  <div className="booking-guest">
-                    <span className="guest-name">{booking.guest_name || 'Huésped'}</span>
-                    <span className="cabin-name">Cabaña {booking.cabin?.name}</span>
+                  <div className="booking-header">
+                    <div className="booking-guest">
+                      <span className="guest-name">{booking.guest_name || 'Huésped'}</span>
+                      <span className="cabin-name">{booking.cabin?.name}</span>
+                    </div>
+                    <div className="booking-details">
+                      <span className="booking-dates">
+                        {checkInDate.toLocaleDateString('es-MX', { 
+                          day: '2-digit', 
+                          month: 'short' 
+                        })} - {checkOutDate.toLocaleDateString('es-MX', { 
+                          day: '2-digit', 
+                          month: 'short' 
+                        })}
+                      </span>
+                      <span className="booking-nights">{nights} noche{nights > 1 ? 's' : ''}</span>
+                    </div>
                   </div>
-                  <div className="booking-details">
-                    <span className="booking-dates">
-                      {checkInDate.toLocaleDateString('es-MX', { 
-                        day: '2-digit', 
-                        month: 'short' 
-                      })} - {checkOutDate.toLocaleDateString('es-MX', { 
-                        day: '2-digit', 
-                        month: 'short' 
-                      })}
-                    </span>
-                    <span className="booking-nights">{nights} noche{nights > 1 ? 's' : ''}</span>
+                  <div className="booking-main">
+                    <div className="status-info">
+                      <div className={`booking-status ${booking.status}`}></div>
+                      <span className={`status-text ${booking.status}`}>{statusText}</span>
+                    </div>
                   </div>
-                  <div className="status-info">
-                    <div className={`booking-status ${booking.status}`}></div>
-                    <span className="status-text">{statusText}</span>
+                  <div className="booking-price">
+                    <span className="booking-amount">{formatCurrency(booking.total_price)}</span>
                   </div>
-                  <span className="booking-amount">{formatCurrency(booking.total_price)}</span>
                 </div>
               )
             })}

@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { X, CheckCircle, Download } from 'lucide-react'
 import Swal from 'sweetalert2'
-import { AgendaFilters, CalendarView } from './agenda'
+import AgendaFilters from './agenda/AgendaFilters'
+import CalendarView from './agenda/CalendarView'
 import './Agenda.css'
 import './Agenda-responsive.css'
 
@@ -65,13 +66,7 @@ const Agenda = ({ onStatusUpdate }) => {
     setSelectedYear(targetYear)
   }, [calendarPage])
 
-  // Refresh automático al entrar por primera vez
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadAgendaReservations()
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [])
+
 
   const loadAgendaReservations = async () => {
     setLoading(true)

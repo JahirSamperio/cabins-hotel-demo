@@ -253,7 +253,7 @@
   background: #2c5530;
   color: #ffffff;
   border: none;
-  border-radius: 6px;
+  border-radius: 6px !important;
   cursor: pointer;
   font-size: 0.9rem;
   transition: background-color 0.2s ease;
@@ -399,8 +399,7 @@
 }
 
 .calendar-grid {
-  display: grid !important;
-  grid-template-columns: 160px repeat(var(--date-columns, 18), minmax(80px, 1fr));
+  /* NO usar variables CSS dinámicas - se aplicarán inline */
   gap: 1px;
   background: #e0e0e0;
   width: 100%;
@@ -408,13 +407,24 @@
   max-width: 100%;
   overflow-x: auto;
   box-sizing: border-box;
-  /* Forzar renderizado inmediato */
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  perspective: 1000px;
-  /* Asegurar renderizado inicial correcto */
   contain: layout style;
-  will-change: grid-template-columns;
+  transform: translateZ(0);
+}
+
+/* Animación suave de entrada */
+.calendar-grid-ready {
+  animation: calendarFadeIn 0.2s ease-out;
+}
+
+@keyframes calendarFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .calendar-grid.grid-ready {
@@ -431,7 +441,7 @@
 }
 
 /* Responsive para evitar amontonamiento */
-@media (max-width: 1400px) {
+/* @media (max-width: 1400px) {
   .calendar-grid {
     grid-template-columns: 140px repeat(var(--date-columns, 18), minmax(70px, 1fr));
   }
@@ -447,11 +457,11 @@
   .calendar-grid {
     grid-template-columns: 100px repeat(var(--date-columns, 18), 50px);
   }
-}
-
+} */
+/* 
 .calendar-header {
   display: contents;
-}
+} */
 
 .cabin-header {
   background: #2c5530;
@@ -499,27 +509,125 @@
 }
 
 .today-header {
-  background: #2c5530;
+  background: #d4af37;
   color: white;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+  position: relative;
 }
 
-.calendar-row {
+.today-header::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #f4d03f;
+}
+
+/* .calendar-row {
   display: contents;
+} */
+
+.calendar-cabin-name {
+  background: #f8f9fa;
+  padding: 0.75rem 0.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 3px solid #e8f0e8;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  min-height: 70px;
+  overflow: hidden;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.3;
+  text-align: center;
+  box-sizing: border-box;
+  font-size: 0.85rem;
+  color: #495057;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.calendar-cabin-name:not(.quick-reserve-row) {
+  background: #e8f5e8;
+  color: #2c5530;
+  border: 1px solid rgba(44, 85, 48, 0.2);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.calendar-cabin-name:not(.quick-reserve-row):hover {
+  background: #d4edda;
+  box-shadow: 0 2px 6px rgba(44, 85, 48, 0.1);
+}
+
+.calendar-cabin-name:not(.quick-reserve-row)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #2c5530;
+  border-radius: 0 2px 2px 0;
+  transition: all 0.2s ease;
 }
 
 .cabin-name {
-  background: #f8f9fa;
-  padding: 0.75rem 0.5rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  border-right: 2px solid #e0e0e0;
-  min-height: 70px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  box-sizing: border-box;
-  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2c5530;
+  background: transparent;
+}
+
+/* Responsive para cabañas del calendario */
+@media (max-width: 767px) {
+  .calendar-cabin-name {
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 0.4rem 0.2rem;
+    color: #1a3a1d;
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.2;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .calendar-cabin-name:not(.quick-reserve-row)::before {
+    width: 3px;
+  }
+  
+  .quick-reserve-row {
+    color: #0d47a1 !important;
+    font-weight: 700 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .calendar-cabin-name {
+    font-size: 0.65rem;
+    font-weight: 900;
+    padding: 0.3rem 0.15rem;
+    color: #0f2419;
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.1;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .calendar-cabin-name:not(.quick-reserve-row)::before {
+    width: 2px;
+  }
+  
+  .quick-reserve-row {
+    color: #0d47a1 !important;
+    font-weight: 800 !important;
+  }
 }
 
 .calendar-cell {
@@ -546,10 +654,22 @@
 
 .calendar-cell:hover {
   background: #f8fafc;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
 }
 
 .calendar-cell.today {
-  background: #eff6ff;
+  background: #fef9e7;
+  border: 2px solid #d4af37;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.3);
+}
+
+.calendar-cell.today.available {
+  background: #f4f1e8;
+}
+
+.calendar-cell.today.quick-reserve-cell {
+  background: #f0f4f8;
 }
 
 .calendar-cell.occupied {
@@ -638,7 +758,15 @@
 }
 
 .calendar-cell.available:hover {
-  background: #f0f9ff;
+  background: #d4edda;
+  animation: pulse 0.6s ease-in-out;
+  box-shadow: 0 4px 8px rgba(44, 85, 48, 0.15);
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
 }
 
 /* Reservation info styles */
@@ -700,7 +828,15 @@
 .calendar-cell.drag-selected {
   background: rgba(44, 85, 48, 0.3) !important;
   border: 2px solid #2c5530 !important;
-  box-shadow: inset 0 0 10px rgba(44, 85, 48, 0.2);
+  box-shadow: 
+    inset 0 0 10px rgba(44, 85, 48, 0.2),
+    0 4px 12px rgba(44, 85, 48, 0.3);
+  animation: dragPulse 1s ease-in-out infinite;
+}
+
+@keyframes dragPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
 }
 
 /* Touch feedback */
@@ -709,17 +845,98 @@
   transition: transform 0.1s ease;
 }
 
-/* Payment status dots */
+/* Reservación Rápida Styles - Ultra Minimalista */
+.quick-reserve-row {
+  background: #e8f4fd !important;
+  font-weight: 500 !important;
+  color: #1565c0 !important;
+  border: 1px solid rgba(21, 101, 192, 0.2) !important;
+}
+
+.quick-reserve-cell {
+  background: #f0f8ff !important;
+}
+
+.quick-reserve-cell:hover {
+  background: #e3f2fd !important;
+  animation: pulse 0.6s ease-in-out;
+  box-shadow: 0 4px 8px rgba(21, 101, 192, 0.15);
+}
+
+.quick-reserve-cell.drag-selected {
+  background: rgba(21, 101, 192, 0.3) !important;
+  border: 2px solid #1565c0 !important;
+}
+
+/* Payment status dots - Responsive */
 .payment-dot {
+  position: absolute;
+  top: 2px;
+  left: 2px;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  position: absolute;
-  top: 4px;
-  left: 4px;
   border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   z-index: 2;
+}
+
+.payment-dot.payment-pending {
+  background: #f57c00;
+}
+
+.payment-dot.payment-partial {
+  background: #1976d2;
+}
+
+.payment-dot.payment-paid {
+  background: #388e3c;
+}
+
+/* Móviles - Dot en esquina superior izquierda */
+@media (max-width: 767px) {
+  .payment-dot {
+    width: 6px;
+    height: 6px;
+    top: 50%;
+    left: 3px;
+    transform: translateY(-50%);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.4);
+  }
+  
+  /* Asegurar que la celda tenga position relative */
+  .calendar-cell {
+    position: relative;
+  }
+  
+  /* Asegurar que reservation-info no interfiera */
+  .reservation-info {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .guest-name {
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Colores más contrastantes en móvil */
+  .payment-dot.payment-pending {
+    background: #ff9800;
+    border-color: #fff;
+  }
+  
+  .payment-dot.payment-partial {
+    background: #2196f3;
+    border-color: #fff;
+  }
+  
+  .payment-dot.payment-paid {
+    background: #4caf50;
+    border-color: #fff;
+  }
 }
 
 .payment-dot.payment-pending {
@@ -1206,9 +1423,9 @@
     justify-content: center;
   }
   
-  .calendar-grid {
+  /* .calendar-grid {
     grid-template-columns: 150px repeat(var(--date-columns, 7), 1fr);
-  }
+  } */
 }
 
 /* Tablet */
@@ -1223,13 +1440,16 @@
     grid-template-columns: 1fr;
   }
   
-  .calendar-grid {
+  /* .calendar-grid {
     grid-template-columns: 120px repeat(var(--date-columns, 7), minmax(50px, 1fr));
-  }
+  } */
   
-  .cabin-name {
-    font-size: 0.8rem;
-    padding: 0.5rem 0.25rem;
+  .calendar-cabin-name {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.2rem;
+    line-height: 1.2;
+    white-space: normal;
+    word-wrap: break-word;
   }
   
   .date-header {
@@ -1315,7 +1535,7 @@
   }
   
   .calendar-grid {
-    grid-template-columns: 100px repeat(var(--date-columns, 7), minmax(50px, 1fr));
+    /* grid-template-columns: 100px repeat(var(--date-columns, 7), minmax(50px, 1fr)); */
     gap: 2px;
     font-size: 0.75rem;
   }
@@ -1425,7 +1645,7 @@
   }
   
   .calendar-grid {
-    grid-template-columns: 80px repeat(var(--date-columns, 7), minmax(45px, 1fr));
+    /* grid-template-columns: 80px repeat(var(--date-columns, 7), minmax(45px, 1fr)); */
     gap: 1px;
   }
   
@@ -1549,9 +1769,9 @@
     padding: 0.5rem;
   }
   
-  .calendar-grid {
+  /* .calendar-grid {
     grid-template-columns: 80px repeat(var(--date-columns, 7), minmax(45px, 1fr));
-  }
+  } */
   
   .calendar-cell {
     min-height: 50px;
@@ -1889,16 +2109,16 @@
     grid-column: span 2;
   }
   
-  .calendar-grid {
+  /* .calendar-grid {
     grid-template-columns: 130px repeat(var(--date-columns, 18), minmax(65px, 1fr));
-  }
+  } */
 }
 
 /* 2. Móvil Horizontal (Landscape) */
 @media (max-width: 767px) and (orientation: landscape) {
-  .calendar-grid {
+  /* .calendar-grid {
     grid-template-columns: 70px repeat(var(--date-columns, 7), minmax(40px, 1fr));
-  }
+  } */
   
   .search-cabin-row {
     grid-template-columns: 1fr 1fr;
@@ -2075,4 +2295,27 @@
     min-height: 48px;
     font-size: 0.9rem;
   }
+}
+
+/* AGREGAR estas clases nuevas a tu CSS: */
+
+.calendar-table-wrapper {
+  background: #e0e0e0;
+  border-radius: 8px;
+  overflow-x: auto;
+  width: 100%;
+}
+
+.calendar-header-row {
+  /* Los estilos de grid se aplicarán inline */
+  background: #e0e0e0;
+}
+
+.calendar-body {
+  background: #e0e0e0;
+}
+
+.cabin-row {
+  /* Los estilos de grid se aplicarán inline */
+  background: #e0e0e0;
 }

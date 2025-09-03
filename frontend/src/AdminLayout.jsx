@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { 
   BarChart3, Calendar, Home, LogOut, Building, Star, DollarSign, Bell 
 } from 'lucide-react'
@@ -12,10 +12,15 @@ export const AdminLayout = ({ children }) => {
   const { activeTab, setActiveTab } = useAdminStore()
   const [pendingCount, setPendingCount] = useState(0)
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout()
     navigate('/')
-  }
+  }, [logout, navigate])
+
+  const handlePendingClick = useCallback(() => {
+    const { goToPendingReservations } = useAdminStore.getState()
+    goToPendingReservations()
+  }, [])
 
   // Cargar estadísticas de pendientes
   useEffect(() => {
@@ -97,10 +102,7 @@ export const AdminLayout = ({ children }) => {
               <div 
                 className="pending-notification" 
                 title={`${pendingCount} reservaciones pendientes - Clic para ver`}
-                onClick={() => {
-                  const { goToPendingReservations } = useAdminStore.getState()
-                  goToPendingReservations()
-                }}
+                onClick={handlePendingClick}
               >
                 <Bell size={16} />
                 <span className="pending-badge">{pendingCount}</span>
