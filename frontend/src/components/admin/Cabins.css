@@ -239,8 +239,8 @@
 
 /* Button Styles */
 .edit-btn {
-  background: #2c5f85;
-  color: white;
+  background: #e8f4e9;
+  color: #2c5530;
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -248,16 +248,17 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  transition: background 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .edit-btn:hover {
-  background: #1e4a6b;
+  background: #2c5530;
+  color: white;
 }
 
 .view-btn {
-  background: #6b7280;
-  color: white;
+  background: #f4f1e8;
+  color: #8b4513;
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -265,16 +266,17 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  transition: background 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .view-btn:hover {
-  background: #4b5563;
+  background: #8b4513;
+  color: white;
 }
 
 .delete-btn {
-  background: #dc2626;
-  color: white;
+  background: #fee2e2;
+  color: #dc2626;
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -282,11 +284,12 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  transition: background 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .delete-btn:hover {
-  background: #b91c1c;
+  background: #dc2626;
+  color: white;
 }
 
 /* Pagination */
