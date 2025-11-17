@@ -763,6 +763,48 @@
   box-shadow: 0 4px 8px rgba(44, 85, 48, 0.15);
 }
 
+.calendar-cell.blocked {
+  background: #ffebee !important;
+  cursor: not-allowed !important;
+}
+
+.calendar-cell.blocked:hover {
+  background: #ffcdd2 !important;
+  box-shadow: 0 2px 4px rgba(244, 67, 54, 0.2);
+}
+
+.calendar-cell.special-price {
+  background: #f0f9ff !important;
+  border: 1px solid #0ea5e9 !important;
+}
+
+.calendar-cell.special-price:hover {
+  background: #e0f2fe !important;
+  box-shadow: 0 2px 4px rgba(14, 165, 233, 0.2);
+}
+
+.blocked-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 0.7rem;
+  color: #d32f2f;
+  padding: 0.25rem;
+}
+
+.special-price-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 0.7rem;
+  color: #059669;
+  padding: 0.25rem;
+}
+
 @keyframes pulse {
   0% { transform: scale(1); }
   50% { transform: scale(1.02); }
@@ -1104,9 +1146,45 @@
   color: #388e3c;
 }
 
+/* Action Type Selector */
+.action-type-selector {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(44, 85, 48, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(44, 85, 48, 0.1);
+}
+
+.action-type-selector label {
+  font-weight: 600;
+  color: #2c5530;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.radio-group {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+}
+
+.radio-option input[type="radio"] {
+  margin: 0;
+  cursor: pointer;
+}
+
 /* Form Styles */
 .cabin-form,
-.reservation-form {
+.reservation-form,
+.availability-form {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { X, CheckCircle, Download } from 'lucide-react'
+import { X, CheckCircle, Download, Calendar, Ban } from 'lucide-react'
 import Swal from 'sweetalert2'
 import AgendaFilters from './agenda/AgendaFilters'
 import CalendarView from './agenda/CalendarView'
@@ -31,6 +31,7 @@ const Agenda = ({ onStatusUpdate }) => {
   }
 
   const [reservations, setReservations] = useState([])
+  const [availability, setAvailability] = useState([])
   const [loading, setLoading] = useState(false)
 
 
@@ -96,10 +97,11 @@ const Agenda = ({ onStatusUpdate }) => {
       ])
       
       if (response.ok) {
-
         setReservations(response.reservations || [])
+        
+        // Cargar disponibilidad para el mismo período
+        await loadAvailability(startDate, endDate)
       } else {
-
         throw new Error(response.msg || 'Error al cargar reservaciones')
       }
     } catch (err) {
@@ -119,6 +121,22 @@ const Agenda = ({ onStatusUpdate }) => {
       setLoading(false)
     }
   }
+  
+  const loadAvailability = async (startDate, endDate) => {
+    try {
+      const token = localStorage.getItem('token')
+      const { availabilityAdminAPI } = await import('../../services/availabilityService')
+      
+      const response = await availabilityAdminAPI.getByRange(startDate, endDate, null, token, 1, 1000)
+      
+      if (response.ok) {
+        setAvailability(response.availability || [])
+      }
+    } catch (err) {
+      console.error('Error loading availability:', err)
+      setAvailability([])
+    }
+  }
 
   const openReservationModal = (reservation) => {
     setSelectedCalendarReservation(reservation)
@@ -135,6 +153,56 @@ const Agenda = ({ onStatusUpdate }) => {
     setPreselectedDate(checkIn)
     setPreselectedCheckOut(checkOut)
     setShowNewReservationModal(true)
+  }
+
+  const handleAvailabilityClick = (cabinName, date, availabilityRecord) => {
+    const isBlocked = !availabilityRecord.is_available
+    const hasSpecialPrice = availabilityRecord.is_available && availabilityRecord.price_override
+    
+    const title = isBlocked ? 'Fecha Bloqueada' : 'Precio Especial'
+    const message = isBlocked 
+      ? `Esta fecha está bloqueada para ${cabinName}`
+      : `Precio especial: $${availabilityRecord.price_override}/noche para ${cabinName}`
+    
+    Swal.fire({
+      title: title,
+      text: message,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const token = localStorage.getItem('token')
+          const { availabilityAdminAPI } = await import('../../services/availabilityService')
+          
+          const response = await availabilityAdminAPI.delete(availabilityRecord.id, token)
+          
+          if (response.ok) {
+            await Swal.fire({
+              title: '¡Eliminado!',
+              text: 'Registro eliminado correctamente',
+              icon: 'success',
+              confirmButtonColor: '#2c5530',
+              timer: 2000
+            })
+            loadAgendaReservations()
+          } else {
+            throw new Error(response.msg || 'Error al eliminar')
+          }
+        } catch (err) {
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudo eliminar el registro',
+            icon: 'error',
+            confirmButtonColor: '#2c5530'
+          })
+        }
+      }
+    })
   }
 
   const closeNewReservationModal = () => {
@@ -393,13 +461,15 @@ const Agenda = ({ onStatusUpdate }) => {
         
         {!loading && (
           <CalendarView 
-            reservations={filteredReservations} 
+            reservations={filteredReservations}
+            availability={availability}
             page={calendarPage}
             cabinFilter={calendarCabinFilter}
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}
             onReservationClick={openReservationModal}
             onNewReservation={openNewReservationModal}
+            onAvailabilityClick={handleAvailabilityClick}
           />
         )}
       </div>
@@ -620,23 +690,59 @@ const ReservationDetailsModal = ({ reservation, onClose, onStatusUpdate, onWhats
 
 // Modal de Nueva Reservación
 const NewReservationModal = ({ onClose, onSave, preselectedCabin, preselectedDate, preselectedCheckOut }) => {
+  const [actionType, setActionType] = useState('reservation')
+  
   return (
     <div className="modal-overlay" onClick={onClose}>
     <div className="modal-content" onClick={e => e.stopPropagation()}>
       <div className="modal-header">
-        <h3>Nueva Reservación</h3>
+        <h3>{actionType === 'reservation' ? 'Nueva Reservación' : 'Gestionar Disponibilidad'}</h3>
         <button className="close-btn" onClick={onClose}>
           <X size={20} />
         </button>
       </div>
       <div className="modal-body">
-        <ReservationForm 
-          onClose={onClose} 
-          onSave={onSave}
-          preselectedCabin={preselectedCabin}
-          preselectedDate={preselectedDate}
-          preselectedCheckOut={preselectedCheckOut}
-        />
+        <div className="action-type-selector">
+          <label>Tipo de acción:</label>
+          <div className="radio-group">
+            <label className="radio-option">
+              <input 
+                type="radio" 
+                value="reservation" 
+                checked={actionType === 'reservation'}
+                onChange={(e) => setActionType(e.target.value)}
+              />
+              <span>Nueva Reservación</span>
+            </label>
+            <label className="radio-option">
+              <input 
+                type="radio" 
+                value="availability" 
+                checked={actionType === 'availability'}
+                onChange={(e) => setActionType(e.target.value)}
+              />
+              <span>Gestionar Disponibilidad</span>
+            </label>
+          </div>
+        </div>
+        
+        {actionType === 'reservation' ? (
+          <ReservationForm 
+            onClose={onClose} 
+            onSave={onSave}
+            preselectedCabin={preselectedCabin}
+            preselectedDate={preselectedDate}
+            preselectedCheckOut={preselectedCheckOut}
+          />
+        ) : (
+          <AvailabilityForm 
+            onClose={onClose} 
+            onSave={onSave}
+            preselectedCabin={preselectedCabin}
+            preselectedDate={preselectedDate}
+            preselectedCheckOut={preselectedCheckOut}
+          />
+        )}
       </div>
     </div>
   </div>
@@ -1095,5 +1201,156 @@ const PaymentEditButton = ({ reservation, setReservations, onPaymentUpdate }) =>
   )
 }
 
-export { ReservationDetailsModal, NewReservationModal, ReservationForm, PaymentEditButton }
+// Formulario de Disponibilidad
+const AvailabilityForm = ({ onClose, onSave, preselectedCabin = '', preselectedDate = '', preselectedCheckOut = '' }) => {
+  const [formData, setFormData] = useState({
+    cabin_id: '',
+    start_date: preselectedDate,
+    end_date: preselectedCheckOut || preselectedDate,
+    is_available: false,
+    price_override: ''
+  })
+  const [cabins, setCabins] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const loadCabins = async () => {
+      try {
+        const { cabinsAPI } = await import('../../services/api')
+        const response = await cabinsAPI.getAll()
+        if (response.ok) {
+          setCabins(response.cabins || [])
+          if (preselectedCabin && response.cabins) {
+            const selectedCabin = response.cabins.find(cabin => cabin.name === preselectedCabin)
+            if (selectedCabin) {
+              setFormData(prev => ({ ...prev, cabin_id: selectedCabin.id }))
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error loading cabins:', err)
+      }
+    }
+    loadCabins()
+  }, [preselectedCabin])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      const token = localStorage.getItem('token')
+      const { availabilityAdminAPI } = await import('../../services/availabilityService')
+      
+      const response = await availabilityAdminAPI.setBulkAvailability({
+        ...formData,
+        price_override: formData.price_override ? parseFloat(formData.price_override) : null
+      }, token)
+      
+      if (response.ok) {
+        await Swal.fire({
+          title: '¡Éxito!',
+          text: response.msg,
+          icon: 'success',
+          confirmButtonColor: '#2c5530',
+          timer: 2000
+        })
+        onSave()
+      } else {
+        Swal.fire({
+          title: 'Error',
+          text: response.msg || 'Error al gestionar disponibilidad',
+          icon: 'error',
+          confirmButtonColor: '#2c5530'
+        })
+      }
+    } catch (err) {
+      Swal.fire({
+        title: 'Error',
+        text: 'Ocurrió un error al gestionar disponibilidad',
+        icon: 'error',
+        confirmButtonColor: '#2c5530'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="availability-form">
+      <div className="form-group">
+        <label>Cabaña</label>
+        <select 
+          value={formData.cabin_id}
+          onChange={(e) => setFormData({...formData, cabin_id: e.target.value})}
+          required
+        >
+          <option value="">Seleccionar cabaña</option>
+          {cabins.map(cabin => (
+            <option key={cabin.id} value={cabin.id}>{cabin.name}</option>
+          ))}
+        </select>
+      </div>
+      
+      <div className="form-row">
+        <div className="form-group">
+          <label>Fecha inicio</label>
+          <input 
+            type="date"
+            value={formData.start_date}
+            onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+            required
+          />
+        </div>
+        <div className="form-group">
+          <label>Fecha fin</label>
+          <input 
+            type="date"
+            value={formData.end_date}
+            onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+            required
+          />
+        </div>
+      </div>
+      
+      <div className="form-group">
+        <label>Estado</label>
+        <select 
+          value={formData.is_available}
+          onChange={(e) => setFormData({...formData, is_available: e.target.value === 'true'})}
+        >
+          <option value={false}>Bloquear (No disponible)</option>
+          <option value={true}>Habilitar (Disponible)</option>
+        </select>
+      </div>
+      
+      {formData.is_available && (
+        <div className="form-group">
+          <label>Precio especial (opcional)</label>
+          <input 
+            type="number"
+            step="0.01"
+            placeholder="Dejar vacío para usar precio normal"
+            value={formData.price_override}
+            onChange={(e) => setFormData({...formData, price_override: e.target.value})}
+          />
+        </div>
+      )}
+      
+
+      
+      <div className="form-actions">
+        <button type="button" className="btn-secondary" onClick={onClose}>
+          Cancelar
+        </button>
+        <button type="submit" className="btn-primary" disabled={loading}>
+          {loading && <div className="button-spinner"></div>}
+          {loading ? 'Guardando...' : 'Guardar'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+export { ReservationDetailsModal, NewReservationModal, ReservationForm, PaymentEditButton, AvailabilityForm }
 export default Agenda

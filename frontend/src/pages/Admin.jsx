@@ -8,6 +8,7 @@ import Cabins from '../components/admin/Cabins'
 import Reviews from '../components/admin/Reviews'
 import Dashboard from '../components/admin/Dashboard'
 import FinancialDashboard from '../components/admin/FinancialDashboard'
+import AvailabilityManagement from '../components/admin/AvailabilityManagement'
 
 const Admin = () => {
   const navigate = useNavigate()
@@ -66,6 +67,8 @@ const Admin = () => {
         return <Agenda onStatusUpdate={handleStatusUpdate} />
       case 'cabins':
         return <Cabins />
+      case 'availability':
+        return <AvailabilityManagement />
       case 'reviews':
         return <Reviews />
       case 'financial':

@@ -179,6 +179,26 @@ export const reservationsAPI = {
       console.error('Network error update reservation:', error)
       return { ok: false, msg: 'Error de conexión' }
     }
+  },
+
+  createGuest: async (reservationData) => {
+    try {
+      const response = await fetch(`${API_URL}/reservations/guest`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(reservationData)
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        console.error('Error createGuest reservation:', response.status, data)
+      }
+      return data
+    } catch (error) {
+      console.error('Network error createGuest reservation:', error)
+      return { ok: false, msg: 'Error de conexión' }
+    }
   }
 }
 

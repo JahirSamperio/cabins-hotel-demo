@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
+import { Ban, DollarSign } from 'lucide-react'
 
-const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', selectedMonth, selectedYear, onReservationClick, onNewReservation }) => {
+const CalendarView = ({ reservations = [], availability = [], page = 0, cabinFilter = 'all', selectedMonth, selectedYear, onReservationClick, onNewReservation, onAvailabilityClick }) => {
   const today = new Date()
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState(null)
@@ -20,12 +21,13 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
   }
   
   const { filteredCabins } = useMemo(() => {
-    const all = [...new Set((reservations || []).map(r => r.cabin?.name).filter(Boolean))]
+    const reservationCabins = (reservations || []).map(r => r.cabin?.name).filter(Boolean)
+    const availabilityCabins = (availability || []).map(a => a.cabin?.name).filter(Boolean)
+    const all = [...new Set([...reservationCabins, ...availabilityCabins])]
     const filtered = cabinFilter === 'all' ? all : all.filter(name => name === cabinFilter)
     return { filteredCabins: filtered }
-  }, [reservations, cabinFilter])
+  }, [reservations, availability, cabinFilter])
   
-  // Agregar fila de Reservación Rápida al inicio
   const quickReserveRow = 'Reservación Rápida'
   const cabins = [quickReserveRow, ...filteredCabins]
   
@@ -38,17 +40,31 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
       const checkOut = new Date(r.check_out)
       
       for (let d = new Date(checkIn); d <= checkOut; d.setDate(d.getDate() + 1)) {
-        const key = `${r.cabin?.name}-${d.toISOString().split('T')[0]}`
+        const key = r.cabin?.name + '-' + d.toISOString().split('T')[0]
         map.set(key, r)
       }
     })
     return map
   }, [reservations])
   
+  const availabilityMap = useMemo(() => {
+    const map = new Map()
+    ;(availability || []).forEach(a => {
+      const key = a.cabin?.name + '-' + a.date
+      map.set(key, a)
+    })
+    return map
+  }, [availability])
+  
   const getReservationForCabinAndDate = useCallback((cabinName, date) => {
     const dateStr = date.toISOString().split('T')[0]
-    return reservationMap.get(`${cabinName}-${dateStr}`)
+    return reservationMap.get(cabinName + '-' + dateStr)
   }, [reservationMap])
+  
+  const getAvailabilityForCabinAndDate = useCallback((cabinName, date) => {
+    const dateStr = date.toISOString().split('T')[0]
+    return availabilityMap.get(cabinName + '-' + dateStr)
+  }, [availabilityMap])
   
   const getStatusColor = (status) => {
     switch(status) {
@@ -90,7 +106,6 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
       const checkIn = startDate <= endDate ? dragStart : dragEnd
       const checkOut = startDate <= endDate ? dragEnd : dragStart
       
-      // Si es reservación rápida, pasar cabaña vacía para que el modal permita selección
       const cabinName = selectedCabin === quickReserveRow ? '' : selectedCabin
       onNewReservation && onNewReservation(cabinName, checkIn, checkOut)
     }
@@ -108,28 +123,26 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
     return current >= start && current <= end
   }
 
-  // Calcular responsive columns con JavaScript
   const getResponsiveColumns = () => {
-    if (typeof window === 'undefined') return `160px repeat(${dates.length}, minmax(80px, 1fr))`
+    if (typeof window === 'undefined') return '160px repeat(' + dates.length + ', minmax(80px, 1fr))'
     
     const width = window.innerWidth
     
     if (width <= 480) {
-      return `80px repeat(${dates.length}, 35px)`
+      return '80px repeat(' + dates.length + ', 35px)'
     } else if (width <= 767) {
-      return `100px repeat(${dates.length}, 50px)`
+      return '100px repeat(' + dates.length + ', 50px)'
     } else if (width <= 900) {
-      return `100px repeat(${dates.length}, 50px)`
+      return '100px repeat(' + dates.length + ', 50px)'
     } else if (width <= 1200) {
-      return `120px repeat(${dates.length}, minmax(60px, 1fr))`
+      return '120px repeat(' + dates.length + ', minmax(60px, 1fr))'
     } else if (width <= 1400) {
-      return `140px repeat(${dates.length}, minmax(70px, 1fr))`
+      return '140px repeat(' + dates.length + ', minmax(70px, 1fr))'
     } else {
-      return `160px repeat(${dates.length}, minmax(80px, 1fr))`
+      return '160px repeat(' + dates.length + ', minmax(80px, 1fr))'
     }
   }
 
-  // NO RENDERIZAR hasta que tengamos las fechas
   if (!dates.length) {
     return (
       <div className="calendar-view" style={{ minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -144,7 +157,6 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
   return (
     <div className="calendar-view">
       <div className="calendar-table-wrapper">
-        {/* HEADER ROW - Separado del grid */}
         <div 
           className="calendar-header-row"
           style={{
@@ -162,7 +174,7 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
             const formatted = formatDate(date)
             const isToday = date.toISOString().split('T')[0] === today.toISOString().split('T')[0]
             return (
-              <div key={`header-${date.toISOString()}`} className={`date-header ${isToday ? 'today-header' : ''}`}>
+              <div key={'header-' + date.toISOString()} className={'date-header' + (isToday ? ' today-header' : '')}>
                 <div className="date-day-name">{formatted.day}</div>
                 <div className="date-number">{formatted.date}</div>
                 <div className="date-month">{formatted.month}</div>
@@ -171,11 +183,10 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
           })}
         </div>
 
-        {/* BODY ROWS - Grid separado para cada fila */}
         <div className="calendar-body">
           {cabins.map((cabinName, cabinIndex) => (
             <div 
-              key={`cabin-${cabinName}`}
+              key={'cabin-' + cabinName}
               className="cabin-row"
               style={{
                 display: 'grid',
@@ -185,13 +196,16 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
                 marginBottom: cabinIndex < cabins.length - 1 ? '1px' : '0'
               }}
             >
-              <div className={`calendar-cabin-name ${cabinName === quickReserveRow ? 'quick-reserve-row' : ''}`}>
+              <div className={'calendar-cabin-name' + (cabinName === quickReserveRow ? ' quick-reserve-row' : '')}>
                 {cabinName}
               </div>
               {dates.map(date => {
                 const reservation = getReservationForCabinAndDate(cabinName, date)
+                const availabilityRecord = getAvailabilityForCabinAndDate(cabinName, date)
                 const dateStr = date.toISOString().split('T')[0]
                 const isToday = dateStr === today.toISOString().split('T')[0]
+                const isBlocked = availabilityRecord && !availabilityRecord.is_available
+                const hasSpecialPrice = availabilityRecord && availabilityRecord.is_available && availabilityRecord.price_override
                 
                 let borderClass = ''
                 if (reservation) {
@@ -210,32 +224,41 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
                   }
                 }
                 
-                // Lógica especial para fila de reservación rápida
                 const isQuickReserve = cabinName === quickReserveRow
                 const cellReservation = isQuickReserve ? null : reservation
                 
+                const cellClasses = [
+                  'calendar-cell',
+                  cellReservation ? 'occupied' : (isBlocked ? 'blocked' : (hasSpecialPrice ? 'special-price' : 'available')),
+                  isToday ? 'today' : '',
+                  borderClass,
+                  cellReservation ? 'status-' + cellReservation.status : '',
+                  isInDragRange(cabinName, dateStr) ? 'drag-selected' : '',
+                  isQuickReserve ? 'quick-reserve-cell' : ''
+                ].filter(Boolean).join(' ')
+                
                 return (
                   <div 
-                    key={`${cabinName}-${date.toISOString()}`} 
-                    className={`calendar-cell ${
-                      cellReservation ? 'occupied' : 'available'
-                    } ${isToday ? 'today' : ''} ${borderClass} ${
-                      cellReservation ? `status-${cellReservation.status}` : ''
-                    } ${isInDragRange(cabinName, dateStr) ? 'drag-selected' : ''} ${
-                      isQuickReserve ? 'quick-reserve-cell' : ''
-                    }`}
+                    key={cabinName + '-' + date.toISOString()} 
+                    className={cellClasses}
                     data-cabin={cabinName}
                     data-date={dateStr}
-                    onClick={() => cellReservation && onReservationClick && onReservationClick(cellReservation)}
+                    onClick={() => {
+                      if (cellReservation) {
+                        onReservationClick && onReservationClick(cellReservation)
+                      } else if ((isBlocked || hasSpecialPrice) && onAvailabilityClick) {
+                        onAvailabilityClick(cabinName, dateStr, availabilityRecord)
+                      }
+                    }}
                     onMouseDown={() => {
-                      if (isQuickReserve || !cellReservation) {
+                      if ((isQuickReserve || !cellReservation) && !isBlocked && !hasSpecialPrice) {
                         handleStart(cabinName, dateStr)
                       }
                     }}
                     onMouseEnter={() => handleMove(cabinName, dateStr)}
                     onMouseUp={handleEnd}
                     onTouchStart={(e) => {
-                      if (isQuickReserve || !cellReservation) {
+                      if ((isQuickReserve || !cellReservation) && !isBlocked && !hasSpecialPrice) {
                         e.preventDefault()
                         handleStart(cabinName, dateStr)
                       }
@@ -257,8 +280,8 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
                       }
                     }}
                     style={{ 
-                      cursor: cellReservation ? 'pointer' : (isDragging ? 'grabbing' : 'grab'),
-                      backgroundColor: cellReservation ? getStatusColor(cellReservation.status) : undefined,
+                      cursor: cellReservation ? 'pointer' : ((isBlocked || hasSpecialPrice) ? 'pointer' : (isDragging ? 'grabbing' : 'grab')),
+                      backgroundColor: cellReservation ? getStatusColor(cellReservation.status) : (isBlocked ? '#ffebee' : (hasSpecialPrice ? '#f0f9ff' : undefined)),
                       userSelect: 'none',
                       touchAction: 'none'
                     }}
@@ -266,16 +289,18 @@ const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', select
                     {cellReservation ? (
                       <div 
                         className="reservation-info"
-                        title={`${cellReservation.guest_name || cellReservation.user?.name || 'Huésped'}
-${cellReservation.guests} huésped${cellReservation.guests > 1 ? 'es' : ''}
-${cellReservation.check_in} - ${cellReservation.check_out}
-${cellReservation.includes_breakfast ? 'Con desayunador' : 'Sin desayunador'}
-$${cellReservation.total_price} (${cellReservation.payment_status === 'pending' ? 'Sin pagar' : cellReservation.payment_status === 'paid' ? 'Pagado' : 'Pago parcial'})
-${cellReservation.guest_phone || cellReservation.user?.phone || 'Sin teléfono'}`}
+                        title={[
+                          cellReservation.guest_name || cellReservation.user?.name || 'Huésped',
+                          cellReservation.guests + ' huésped' + (cellReservation.guests > 1 ? 'es' : ''),
+                          cellReservation.check_in + ' - ' + cellReservation.check_out,
+                          cellReservation.includes_breakfast ? 'Con desayunador' : 'Sin desayunador',
+                          '$' + cellReservation.total_price + ' (' + (cellReservation.payment_status === 'pending' ? 'Sin pagar' : cellReservation.payment_status === 'paid' ? 'Pagado' : 'Pago parcial') + ')',
+                          cellReservation.guest_phone || cellReservation.user?.phone || 'Sin teléfono'
+                        ].join('\n')}
                       >
                         <div className="guest-name">
                           {cellReservation.check_in === dateStr && (
-                            <span className={`payment-dot payment-${cellReservation.payment_status}`}></span>
+                            <span className={'payment-dot payment-' + cellReservation.payment_status}></span>
                           )}
                           {(() => {
                             const checkIn = new Date(cellReservation.check_in)
@@ -290,6 +315,22 @@ ${cellReservation.guest_phone || cellReservation.user?.phone || 'Sin teléfono'}
                           {cellReservation.check_in === dateStr ? 'IN' : ''}
                           {cellReservation.check_out === dateStr ? 'OUT' : ''}
                         </div>
+                      </div>
+                    ) : isBlocked ? (
+                      <div 
+                        className="blocked-info"
+                        title={'Fecha bloqueada para mantenimiento'}
+                      >
+                        <Ban size={14} style={{ color: '#d32f2f' }} />
+                        <div style={{ fontSize: '10px', color: '#666' }}>Bloqueada</div>
+                      </div>
+                    ) : availabilityRecord && availabilityRecord.is_available && availabilityRecord.price_override ? (
+                      <div 
+                        className="special-price-info"
+                        title={'Precio especial: $' + availabilityRecord.price_override + '/noche'}
+                      >
+                        <DollarSign size={14} style={{ color: '#059669' }} />
+                        <div style={{ fontSize: '10px', color: '#059669', fontWeight: 'bold' }}>${availabilityRecord.price_override}</div>
                       </div>
                     ) : (
                       dateStr >= today.toISOString().split('T')[0] && (

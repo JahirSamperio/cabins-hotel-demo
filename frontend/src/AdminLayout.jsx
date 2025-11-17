@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useEffect, useState, useCallback } from 'react'
 import { 
-  BarChart3, Calendar, Home, LogOut, Building, Star, DollarSign, Bell 
+  BarChart3, Calendar, Home, LogOut, Building, Star, DollarSign, Bell, CalendarCheck 
 } from 'lucide-react'
 import { useAuthStore, useAdminStore } from './hooks'
 
@@ -85,6 +85,7 @@ export const AdminLayout = ({ children }) => {
     { id: 'reservations', label: 'Reservaciones', icon: Calendar },
     { id: 'agenda', label: 'Agenda', icon: Calendar },
     { id: 'cabins', label: 'Cabañas', icon: Building },
+    { id: 'availability', label: 'Disponibilidad', icon: CalendarCheck },
     { id: 'reviews', label: 'Reviews', icon: Star },
     { id: 'financial', label: 'Finanzas', icon: DollarSign }
   ]
