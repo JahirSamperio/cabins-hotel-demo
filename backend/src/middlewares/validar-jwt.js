@@ -1,8 +1,15 @@
 import jwt from 'jsonwebtoken';
 
 export const validarJWT = (req, res, next) => {
-    // Leer el Token
-    const token = req.header('x-token');
+    // Leer el Token desde x-token o Authorization header
+    let token = req.header('x-token');
+    
+    if (!token) {
+        const authHeader = req.header('Authorization');
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.substring(7);
+        }
+    }
 
     if (!token) {
         return res.status(401).json({

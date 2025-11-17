@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Star, CheckCircle, X } from 'lucide-react'
 import '../../pages/Admin.css'
+import '../../styles/AdminDesignSystem.css'
 
 const Reviews = () => {
   const [reviews, setReviews] = useState([])
@@ -23,7 +24,7 @@ const Reviews = () => {
     }
   }
 
-  const handleReviewAction = async (reviewId, action) => {
+  const handleReviewAction = useCallback(async (reviewId, action) => {
     try {
       const token = localStorage.getItem('token')
       const { reviewsAPI } = await import('../../services/api')
@@ -38,7 +39,7 @@ const Reviews = () => {
     } catch (err) {
       console.error('Error handling review:', err)
     }
-  }
+  }, [])
 
   useEffect(() => {
     loadReviews()
@@ -47,7 +48,7 @@ const Reviews = () => {
   return (
     <div className="reviews-section">
       <div className="section-header">
-        <h3>Reviews Pendientes</h3>
+        <h3 className="admin-section-title">Reviews Pendientes</h3>
       </div>
 
       {loading && (

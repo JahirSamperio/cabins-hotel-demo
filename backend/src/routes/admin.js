@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getStats, getRecentBookings } from '../controllers/admin.js';
+import { getStats, getRecentBookings, getDashboardData } from '../controllers/admin.js';
 import { validarJWT } from '../middlewares/validar-jwt.js';
 import { validarAdmin } from '../middlewares/validar-admin.js';
 
@@ -14,5 +14,8 @@ router.get('/stats', getStats);
 
 // GET /api/admin/recent-bookings - Obtener reservaciones recientes
 router.get('/recent-bookings', getRecentBookings);
+
+// GET /api/admin/dashboard - Obtener datos completos del dashboard (stats + reservaciones)
+router.get('/dashboard', getDashboardData);
 
 export default router;

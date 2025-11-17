@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import { X, CheckCircle, Edit, Plus, Search } from 'lucide-react'
 import Swal from 'sweetalert2'
-import '../../pages/Admin.css'
+import { useAdminStore } from '../../hooks'
+import './Reservations.css'
+import '../../styles/AdminDesignSystem.css'
 
 const Reservations = () => {
+  const { pendingFilter, setPendingFilter } = useAdminStore()
   const [reservations, setReservations] = useState([])
   const [filteredReservations, setFilteredReservations] = useState([])
   const [paginationInfo, setPaginationInfo] = useState({})
@@ -25,14 +28,18 @@ const Reservations = () => {
   const [customTotal, setCustomTotal] = useState(0)
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [filtersCollapsed, setFiltersCollapsed] = useState(window.innerWidth <= 991)
+  
+  // Flag simple para controlar carga inicial
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
 
-  const loadReservationsWithFilters = async () => {
+  const loadReservationsWithFilters = async (forceFilters = null) => {
     setLoading(true)
     try {
       const token = localStorage.getItem('token')
       const { adminService } = await import('../../services/adminService')
       
-      const filters = {
+      // Usar filtros forzados si se proporcionan, sino usar los del estado
+      const filters = forceFilters || {
         page: currentPage,
         limit: itemsPerPage,
         status: statusFilter,
@@ -57,14 +64,47 @@ const Reservations = () => {
     }
   }
 
-  // Debounced search
+  // Efecto unificado para cargar datos
   useEffect(() => {
+    // Skip en carga inicial hasta que se procese pendingFilter
+    if (isInitialLoad && !pendingFilter) {
+      setIsInitialLoad(false)
+      loadReservationsWithFilters()
+      return
+    }
+    
+    // Si hay pendingFilter, aplicarlo y marcar como procesado
+    if (pendingFilter) {
+      setStatusFilter('pending')
+      setFiltersCollapsed(false)
+      setCurrentPage(1)
+      setPendingFilter(false)
+      setIsInitialLoad(false)
+      return
+    }
+    
+    // Carga normal de datos
+    if (!isInitialLoad) {
+      loadReservationsWithFilters()
+    }
+  }, [statusFilter, paymentFilter, bookingTypeFilter, dateFilter, customDate, currentPage, itemsPerPage, pendingFilter])
+
+  // Efecto para búsqueda con debounce
+  useEffect(() => {
+    if (isInitialLoad) return
+    
     const timeoutId = setTimeout(() => {
       setSearchLoading(true)
       loadReservationsWithFilters().finally(() => setSearchLoading(false))
     }, 300)
     return () => clearTimeout(timeoutId)
   }, [searchTerm])
+
+  // Resetear página cuando cambian los filtros
+  useEffect(() => {
+    if (isInitialLoad) return
+    setCurrentPage(1)
+  }, [statusFilter, paymentFilter, bookingTypeFilter, dateFilter, customDate])
 
   const handleStatusUpdate = async (reservationId, newStatus) => {
     setActionLoading(prev => ({ ...prev, [reservationId]: newStatus }))
@@ -98,6 +138,11 @@ const Reservations = () => {
         setFilteredReservations(prev => prev.map(res => 
           res.id === reservationId ? { ...res, status: newStatus } : res
         ))
+        
+        // Actualizar contador de pendientes en el AdminLayout
+        if (newStatus === 'confirmed' || newStatus === 'cancelled') {
+          window.dispatchEvent(new CustomEvent('updatePendingCount'))
+        }
         
         if (newStatus === 'cancelled') {
           Swal.fire({
@@ -235,20 +280,12 @@ const Reservations = () => {
     setShowModal(false)
   }
 
-  useEffect(() => {
-    loadReservationsWithFilters()
-  }, [statusFilter, paymentFilter, bookingTypeFilter, dateFilter, customDate, currentPage, itemsPerPage])
-
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [statusFilter, paymentFilter, bookingTypeFilter, dateFilter, customDate])
-
   const totalPages = paginationInfo.totalPages || 1
 
   return (
     <div className="reservations-section">
       <div className="section-header">
-        <h3>Gestión de Reservaciones</h3>
+        <h3 className="admin-section-title">Gestión de Reservaciones</h3>
         <div className="section-actions">
           <button className="btn-primary" onClick={openModal}>
             <Plus size={16} /> Nueva Reservación
@@ -256,73 +293,72 @@ const Reservations = () => {
         </div>
       </div>
       
-      <div className="filters-section">
-        <div className="filters-header">
-          <button 
-            className="filters-toggle"
-            onClick={() => setFiltersCollapsed(!filtersCollapsed)}
-            title={filtersCollapsed ? 'Mostrar filtros' : 'Ocultar filtros'}
-          >
-            <span className={`toggle-icon ${filtersCollapsed ? 'collapsed' : 'expanded'}`}>
+      <div className="admin-filters-section">
+        <div className="admin-filters-header" onClick={() => setFiltersCollapsed(!filtersCollapsed)}>
+          <button className="admin-filters-toggle">
+            <span className={`admin-toggle-icon ${filtersCollapsed ? 'collapsed' : 'expanded'}`}>
               ▶ 
             </span>
           </button>
-          <h4 onClick={() => setFiltersCollapsed(!filtersCollapsed)} style={{cursor: 'pointer', margin: 0}}>Filtros</h4>
+          <h4 className="admin-filters-title">Filtros y Búsqueda</h4>
         </div>
         
-        <div className={`filters-grid ${filtersCollapsed ? 'collapsed' : ''}`}>
-          <div className="filter-group search-group">
-            <label>Búsqueda avanzada:</label>
-            <input 
-              type="text" 
-              placeholder="Nombre, teléfono, cabaña o ID..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', width: '100%'}}
-            />
-
+        <div className={`admin-filters-grid ${filtersCollapsed ? 'collapsed' : ''}`} style={{display: filtersCollapsed ? 'none' : 'grid'}}>
+          <div className="admin-filter-group admin-search-group">
+            <label className="admin-filter-label">Búsqueda avanzada</label>
+            <div className="admin-search-group">
+              <Search size={16} className="admin-search-icon" />
+              <input 
+                type="text" 
+                className="admin-filter-input admin-search-input"
+                placeholder="Nombre, teléfono, cabaña o ID..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="filter-group filter-status">
-            <label>Estado:</label>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="all">Todos</option>
+          <div className="admin-filter-group">
+            <label className="admin-filter-label">Estado de Reservación</label>
+            <select className="admin-filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">Todos los estados</option>
               <option value="pending">Pendientes</option>
               <option value="confirmed">Confirmadas</option>
               <option value="completed">Completadas</option>
               <option value="cancelled">Canceladas</option>
             </select>
           </div>
-          <div className="filter-group filter-payment">
-            <label>Pago:</label>
-            <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)}>
-              <option value="all">Todos</option>
+          <div className="admin-filter-group">
+            <label className="admin-filter-label">Estado de Pago</label>
+            <select className="admin-filter-select" value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)}>
+              <option value="all">Todos los pagos</option>
               <option value="pending">Pendiente</option>
               <option value="partial">Parcial</option>
               <option value="paid">Pagado</option>
             </select>
           </div>
-          <div className="filter-group filter-type">
-            <label>Tipo:</label>
-            <select value={bookingTypeFilter} onChange={(e) => setBookingTypeFilter(e.target.value)}>
-              <option value="all">Todos</option>
+          <div className="admin-filter-group">
+            <label className="admin-filter-label">Tipo de Reserva</label>
+            <select className="admin-filter-select" value={bookingTypeFilter} onChange={(e) => setBookingTypeFilter(e.target.value)}>
+              <option value="all">Todos los tipos</option>
               <option value="online">Online</option>
-              <option value="walk_in">Walk-in</option>
+              <option value="walk_in">Presencial</option>
             </select>
           </div>
-          <div className="filter-group filter-date">
-            <label>Fecha:</label>
-            <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
-              <option value="all">Todas</option>
+          <div className="admin-filter-group">
+            <label className="admin-filter-label">Período</label>
+            <select className="admin-filter-select" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
+              <option value="all">Todas las fechas</option>
               <option value="today">Hoy</option>
               <option value="week">Esta semana</option>
               <option value="month">Este mes</option>
               <option value="custom">Fecha específica</option>
             </select>
           </div>
-          <div className="filter-group filter-date-input">
-            <label>Seleccionar fecha:</label>
+          <div className="admin-filter-group">
+            <label className="admin-filter-label">Fecha Específica</label>
             <input 
               type="date" 
+              className="admin-filter-input"
               value={customDate}
               onChange={(e) => {
                 setCustomDate(e.target.value)
@@ -330,19 +366,17 @@ const Reservations = () => {
                   setDateFilter('all')
                 }
               }}
-              style={{padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px'}}
             />
           </div>
-          <button 
-            className="btn-clear-filters filter-clear"
-            onClick={clearFilters}
-            title="Limpiar filtros"
-          >
-            <X size={14} /> Limpiar
-          </button>
-
-          <div className="filter-stats" style={{flexShrink: 0, whiteSpace: 'nowrap'}}>
-            <span>Mostrando {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, paginationInfo.totalItems || 0)} de {paginationInfo.totalItems || 0}</span>
+          <div className="admin-filter-group">
+            <label className="admin-filter-label">&nbsp;</label>
+            <button 
+              className="btn-clear"
+              onClick={clearFilters}
+              title="Limpiar todos los filtros"
+            >
+              <X size={14} /> Limpiar Filtros
+            </button>
           </div>
         </div>
       </div>
@@ -357,6 +391,9 @@ const Reservations = () => {
       {!loading && filteredReservations.length > 0 ? (
         <>
           <div className="table-header-controls">
+            <div style={{fontSize: '0.875rem', color: '#6b7280'}}>
+              Mostrando {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, paginationInfo.totalItems || 0)} de {paginationInfo.totalItems || 0}
+            </div>
             <div className="items-per-page">
               <label>Mostrar:</label>
               <select value={itemsPerPage} onChange={(e) => {
@@ -370,6 +407,8 @@ const Reservations = () => {
               <span>por página</span>
             </div>
           </div>
+          
+          {/* Desktop Table */}
           <div className="reservations-table-container">
             <table className="reservations-table">
               <thead>
@@ -488,6 +527,123 @@ const Reservations = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+          
+          {/* Mobile Cards */}
+          <div className="reservations-cards">
+            {filteredReservations.map(reservation => (
+              <div key={reservation.id} className="reservation-card">
+                <div className="card-header">
+                  <div>
+                    <div className="card-cabin">{reservation.cabin?.name || 'Cabaña'}</div>
+                    <div className="card-guest">{reservation.guest_name || reservation.user?.name || 'Huésped'}</div>
+                  </div>
+                  <div className="card-price-section">
+                    <span className="price-label">Total</span>
+                    <span className="card-price">${reservation.total_price || 0}</span>
+                  </div>
+                </div>
+                
+                <div className="card-body">
+                  <div className="card-info">
+                    <span className="info-label">Huéspedes:</span>
+                    <span className="info-value">{reservation.guests} personas</span>
+                  </div>
+                  <div className="card-info">
+                    <span className="info-label">Desayuno:</span>
+                    <span className="info-value">{reservation.includes_breakfast ? 'Incluido' : 'No incluido'}</span>
+                  </div>
+                  <div className="card-info">
+                    <span className="info-label">Fechas:</span>
+                    <span className="info-value">
+                      {new Date(reservation.check_in).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })} - {new Date(reservation.check_out).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
+                    </span>
+                  </div>
+                  <div className="card-payment">
+                    <span className="info-label">Pagado:</span>
+                    <span className="info-value">${reservation.amount_paid || 0}</span>
+                    {(reservation.total_price - (reservation.amount_paid || 0)) > 0 && (
+                      <span className="pending-amount">(Pendiente: ${(reservation.total_price - (reservation.amount_paid || 0)).toFixed(2)})</span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="card-footer">
+                  <div className="card-statuses">
+                    <span className={`reservation-status ${reservation.status.toLowerCase()}`}>
+                      {reservation.status === 'pending' ? 'Por Confirmar' :
+                       reservation.status === 'confirmed' ? 'Confirmada' :
+                       reservation.status === 'cancelled' ? 'Cancelada' :
+                       reservation.status === 'completed' ? 'Completada' : reservation.status}
+                    </span>
+                    <span className={`payment-status ${reservation.payment_status}`}>
+                      {reservation.payment_status === 'pending' ? 'Sin Pagar' :
+                       reservation.payment_status === 'paid' ? 'Pagado' : 'Parcial'}
+                    </span>
+                  </div>
+                  
+                  <div className="card-actions">
+                    <button 
+                      className="edit-btn"
+                      onClick={() => openPaymentModal(reservation)}
+                      title="Editar Pago"
+                    >
+                      <Edit size={16} />
+                    </button>
+                    {(reservation.guest_phone || reservation.user?.phone) && (
+                      <button 
+                        className="whatsapp-btn"
+                        onClick={() => handleWhatsAppContact(reservation)}
+                        title="Contactar por WhatsApp"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.251"/>
+                        </svg>
+                      </button>
+                    )}
+                    {reservation.status === 'pending' && (
+                      <>
+                        <button 
+                          className="confirm-btn"
+                          onClick={() => handleStatusUpdate(reservation.id, 'confirmed')}
+                          disabled={actionLoading[reservation.id]}
+                          title="Confirmar"
+                        >
+                          {actionLoading[reservation.id] === 'confirmed' ? 
+                            <div className="button-spinner"></div> : 
+                            <CheckCircle size={16} />
+                          }
+                        </button>
+                        <button 
+                          className="cancel-btn"
+                          onClick={() => handleStatusUpdate(reservation.id, 'cancelled')}
+                          disabled={actionLoading[reservation.id]}
+                          title="Cancelar"
+                        >
+                          {actionLoading[reservation.id] === 'cancelled' ? 
+                            <div className="button-spinner"></div> : 
+                            <X size={16} />
+                          }
+                        </button>
+                      </>
+                    )}
+                    {reservation.status === 'confirmed' && (
+                      <button 
+                        className="cancel-btn"
+                        onClick={() => handleStatusUpdate(reservation.id, 'cancelled')}
+                        disabled={actionLoading[reservation.id]}
+                        title="Cancelar"
+                      >
+                        {actionLoading[reservation.id] === 'cancelled' ? 
+                          <div className="button-spinner"></div> : 
+                          <X size={16} />
+                        }
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
           
           {totalPages > 1 && (

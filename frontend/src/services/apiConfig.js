@@ -10,6 +10,7 @@ export const API_CONFIG = {
     // Admin
     ADMIN_STATS: '/admin/stats',
     ADMIN_RECENT_BOOKINGS: '/admin/recent-bookings',
+    ADMIN_DASHBOARD: '/admin/dashboard',
     
     // Reservations
     RESERVATIONS: '/reservations',

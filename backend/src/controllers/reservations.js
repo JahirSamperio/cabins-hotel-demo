@@ -1,4 +1,4 @@
-import { crearReservacionService, obtenerReservacionesService, obtenerReservacionService, actualizarReservacionService, crearReservacionWalkInService, obtenerReservacionesPorRangoService } from "../services/reservations.js";
+import { crearReservacionService, obtenerReservacionesService, obtenerReservacionService, actualizarReservacionService, crearReservacionWalkInService, obtenerReservacionesPorRangoService, crearReservacionInvitadoService } from "../services/reservations.js";
 
 export const crearReservacion = async (req, res) => {
     try {
@@ -146,6 +146,45 @@ export const actualizarReservacion = async (req, res) => {
         });
 
     } catch (error) {
+        res.status(500).json({
+            ok: false,
+            msg: "Error en el servidor"
+        });
+    }
+};
+
+export const crearReservacionInvitado = async (req, res) => {
+    try {
+        const { cabin_id, check_in, check_out, guests, guest_name, guest_email, guest_phone, special_requests, includes_breakfast } = req.body;
+        
+        console.log('Datos recibidos:', {
+            cabin_id, check_in, check_out, guests, guest_name, guest_email, guest_phone, special_requests, includes_breakfast,
+            includes_breakfast_type: typeof includes_breakfast
+        });
+        
+        // Convertir includes_breakfast a boolean explícitamente
+        const breakfastBoolean = includes_breakfast === true || includes_breakfast === 'true' || includes_breakfast === 'on';
+
+        const { status, ok, msg, reservation } = await crearReservacionInvitadoService(
+            cabin_id, 
+            check_in, 
+            check_out, 
+            guests, 
+            guest_name, 
+            guest_email, 
+            guest_phone, 
+            special_requests,
+            breakfastBoolean
+        );
+
+        res.status(status).json({
+            ok,
+            msg,
+            reservation
+        });
+
+    } catch (error) {
+        console.error('Error en crearReservacionInvitado:', error);
         res.status(500).json({
             ok: false,
             msg: "Error en el servidor"

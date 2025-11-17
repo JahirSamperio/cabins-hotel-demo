@@ -455,6 +455,125 @@ export const obtenerReservacionService = async (id, user_id, is_admin) => {
     }
 };
 
+export const crearReservacionInvitadoService = async (cabin_id, check_in, check_out, guests, guest_name, guest_email, guest_phone, special_requests, includes_breakfast = false) => {
+    const { default: conexion } = await import('../config/database.js');
+    const transaction = await conexion.transaction();
+    
+    try {
+        // Lock de la cabaña durante la transacción para prevenir race conditions
+        const cabin = await Cabin.findByPk(cabin_id, {
+            lock: transaction.LOCK.UPDATE,
+            transaction
+        });
+        
+        if (!cabin || !cabin.is_active) {
+            await transaction.rollback();
+            return {
+                ok: false,
+                status: 404,
+                msg: "Cabaña no encontrada o no disponible"
+            };
+        }
+
+        // Verificar capacidad
+        if (guests > cabin.capacity) {
+            await transaction.rollback();
+            return {
+                ok: false,
+                status: 400,
+                msg: `La cabaña solo tiene capacidad para ${cabin.capacity} huéspedes`
+            };
+        }
+
+        // Verificar disponibilidad dentro de la transacción
+        const conflictingReservation = await Reservation.findOne({
+            where: {
+                cabin_id,
+                status: ['pending', 'confirmed'],
+                [Op.or]: [
+                    {
+                        check_in: {
+                            [Op.between]: [check_in, check_out]
+                        }
+                    },
+                    {
+                        check_out: {
+                            [Op.between]: [check_in, check_out]
+                        }
+                    },
+                    {
+                        [Op.and]: [
+                            {
+                                check_in: {
+                                    [Op.lte]: check_in
+                                }
+                            },
+                            {
+                                check_out: {
+                                    [Op.gte]: check_out
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            transaction
+        });
+
+        if (conflictingReservation) {
+            await transaction.rollback();
+            return {
+                ok: false,
+                status: 409,
+                msg: "La cabaña no está disponible en las fechas seleccionadas",
+                code: 'CABIN_NOT_AVAILABLE'
+            };
+        }
+
+        const nights = Math.ceil((new Date(check_out) - new Date(check_in)) / (1000 * 60 * 60 * 24));
+        const basePrice = nights * cabin.price_per_night;
+        const breakfastPrice = includes_breakfast ? (guests * nights * 150) : 0;
+        const total_price = basePrice + breakfastPrice;
+
+        const reservation = await Reservation.create({
+            user_id: '00000000-0000-0000-0000-000000000001',
+            cabin_id,
+            check_in,
+            check_out,
+            guests,
+            total_price,
+            special_requests,
+            status: 'pending',
+            booking_type: 'online',
+            guest_name,
+            guest_email,
+            guest_phone,
+            payment_method: 'online',
+            payment_status: 'pending',
+            includes_breakfast
+        }, { transaction });
+
+        await transaction.commit();
+
+        return {
+            ok: true,
+            status: 201,
+            msg: "Reservación de invitado creada exitosamente",
+            reservation
+        };
+
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Error en crearReservacionInvitadoService:', error);
+        return {
+            ok: false,
+            status: 500,
+            msg: 'Error en el servidor',
+            code: 'SERVER_ERROR'
+        };
+    }
+};
+
 export const actualizarReservacionService = async (id, updateData, user_id, is_admin) => {
     try {
         let whereClause = { id };

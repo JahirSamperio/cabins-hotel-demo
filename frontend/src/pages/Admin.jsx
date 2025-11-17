@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore, useAdminStore } from '../hooks'
 import { AdminLayout } from '../AdminLayout'
@@ -8,6 +8,7 @@ import Cabins from '../components/admin/Cabins'
 import Reviews from '../components/admin/Reviews'
 import Dashboard from '../components/admin/Dashboard'
 import FinancialDashboard from '../components/admin/FinancialDashboard'
+import AvailabilityManagement from '../components/admin/AvailabilityManagement'
 
 const Admin = () => {
   const navigate = useNavigate()
@@ -25,13 +26,21 @@ const Admin = () => {
       return
     }
     
+    // Limpiar estado del admin al entrar (más seguro que refresh)
+    const hasCleanedState = sessionStorage.getItem('adminStateClean')
+    if (user?.is_admin && !hasCleanedState) {
+      // Limpiar stores y cache
+      setReservations([])
+      sessionStorage.setItem('adminStateClean', 'true')
+    }
+    
     // Establecer dashboard como tab activo al acceder
     setActiveTab('dashboard')
   }, [navigate, isAuthenticated, user, setActiveTab])
 
 
 
-  const handleStatusUpdate = async (reservationId, newStatus) => {
+  const handleStatusUpdate = useCallback(async (reservationId, newStatus) => {
     try {
       const { reservationsAPI } = await import('../services/api')
       const token = localStorage.getItem('token')
@@ -46,7 +55,7 @@ const Admin = () => {
     } catch (err) {
       console.error('Error updating status:', err)
     }
-  }
+  }, [reservations, setReservations])
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -58,6 +67,8 @@ const Admin = () => {
         return <Agenda onStatusUpdate={handleStatusUpdate} />
       case 'cabins':
         return <Cabins />
+      case 'availability':
+        return <AvailabilityManagement />
       case 'reviews':
         return <Reviews />
       case 'financial':

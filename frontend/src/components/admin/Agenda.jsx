@@ -1,6 +1,8 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { X, CheckCircle, Download, Search } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { X, CheckCircle, Download, Calendar, Ban } from 'lucide-react'
 import Swal from 'sweetalert2'
+import AgendaFilters from './agenda/AgendaFilters'
+import CalendarView from './agenda/CalendarView'
 import './Agenda.css'
 import './Agenda-responsive.css'
 
@@ -29,6 +31,7 @@ const Agenda = ({ onStatusUpdate }) => {
   }
 
   const [reservations, setReservations] = useState([])
+  const [availability, setAvailability] = useState([])
   const [loading, setLoading] = useState(false)
 
 
@@ -64,13 +67,7 @@ const Agenda = ({ onStatusUpdate }) => {
     setSelectedYear(targetYear)
   }, [calendarPage])
 
-  // Refresh automático al entrar por primera vez
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadAgendaReservations()
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [])
+
 
   const loadAgendaReservations = async () => {
     setLoading(true)
@@ -100,10 +97,11 @@ const Agenda = ({ onStatusUpdate }) => {
       ])
       
       if (response.ok) {
-
         setReservations(response.reservations || [])
+        
+        // Cargar disponibilidad para el mismo período
+        await loadAvailability(startDate, endDate)
       } else {
-
         throw new Error(response.msg || 'Error al cargar reservaciones')
       }
     } catch (err) {
@@ -123,6 +121,22 @@ const Agenda = ({ onStatusUpdate }) => {
       setLoading(false)
     }
   }
+  
+  const loadAvailability = async (startDate, endDate) => {
+    try {
+      const token = localStorage.getItem('token')
+      const { availabilityAdminAPI } = await import('../../services/availabilityService')
+      
+      const response = await availabilityAdminAPI.getByRange(startDate, endDate, null, token, 1, 1000)
+      
+      if (response.ok) {
+        setAvailability(response.availability || [])
+      }
+    } catch (err) {
+      console.error('Error loading availability:', err)
+      setAvailability([])
+    }
+  }
 
   const openReservationModal = (reservation) => {
     setSelectedCalendarReservation(reservation)
@@ -139,6 +153,56 @@ const Agenda = ({ onStatusUpdate }) => {
     setPreselectedDate(checkIn)
     setPreselectedCheckOut(checkOut)
     setShowNewReservationModal(true)
+  }
+
+  const handleAvailabilityClick = (cabinName, date, availabilityRecord) => {
+    const isBlocked = !availabilityRecord.is_available
+    const hasSpecialPrice = availabilityRecord.is_available && availabilityRecord.price_override
+    
+    const title = isBlocked ? 'Fecha Bloqueada' : 'Precio Especial'
+    const message = isBlocked 
+      ? `Esta fecha está bloqueada para ${cabinName}`
+      : `Precio especial: $${availabilityRecord.price_override}/noche para ${cabinName}`
+    
+    Swal.fire({
+      title: title,
+      text: message,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const token = localStorage.getItem('token')
+          const { availabilityAdminAPI } = await import('../../services/availabilityService')
+          
+          const response = await availabilityAdminAPI.delete(availabilityRecord.id, token)
+          
+          if (response.ok) {
+            await Swal.fire({
+              title: '¡Eliminado!',
+              text: 'Registro eliminado correctamente',
+              icon: 'success',
+              confirmButtonColor: '#2c5530',
+              timer: 2000
+            })
+            loadAgendaReservations()
+          } else {
+            throw new Error(response.msg || 'Error al eliminar')
+          }
+        } catch (err) {
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudo eliminar el registro',
+            icon: 'error',
+            confirmButtonColor: '#2c5530'
+          })
+        }
+      }
+    })
   }
 
   const closeNewReservationModal = () => {
@@ -316,7 +380,7 @@ const Agenda = ({ onStatusUpdate }) => {
         )}
         
         <div className="section-header">
-          <h3>Agenda de Ocupación</h3>
+          <h3 className="admin-section-title">Agenda de Ocupación</h3>
           <div className="payment-legend">
             <span className="legend-item">
               <span className="payment-dot payment-pending"></span>
@@ -337,105 +401,27 @@ const Agenda = ({ onStatusUpdate }) => {
         </div>
       
         <div className="calendar-controls">
-          <div className="filters-section">
-            <div className="filters-header">
-              <button 
-                className="filters-toggle"
-                onClick={() => setFiltersCollapsed(!filtersCollapsed)}
-                title={filtersCollapsed ? 'Mostrar filtros' : 'Ocultar filtros'}
-              >
-                <span className={`toggle-icon ${filtersCollapsed ? 'collapsed' : 'expanded'}`}>
-                  ▶ 
-                </span>
-              </button>
-              <h4 onClick={() => setFiltersCollapsed(!filtersCollapsed)} style={{cursor: 'pointer', margin: 0}}>Filtros</h4>
-            </div>
-            <div className={`filters-grid ${filtersCollapsed ? 'collapsed' : ''}`}>
-
-            <div className="search-cabin-row">
-              <div className="filter-group">
-                <label>Buscar:</label>
-                <div className="search-input">
-                  <Search size={16} />
-                  <input 
-                    type="text"
-                    placeholder="Nombre o teléfono..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-              </div>
-              
-              <div className="filter-group">
-                <label>Cabaña:</label>
-                <select value={calendarCabinFilter} onChange={(e) => setCalendarCabinFilter(e.target.value)}>
-                  <option value="all">Todas las cabañas</option>
-                  {[...new Set(reservations.map(r => r.cabin?.name).filter(Boolean))].map(cabinName => (
-                    <option key={cabinName} value={cabinName}>{cabinName}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            
-            <div className="month-filter">
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Mes:</label>
-                  <select 
-                    value={selectedMonth}
-                    onChange={(e) => {
-                      const month = parseInt(e.target.value)
-                      setSelectedMonth(month)
-                      const today = new Date()
-                      const monthDiff = (selectedYear - today.getFullYear()) * 12 + (month - today.getMonth())
-                      setCalendarPage(monthDiff)
-                    }}
-                  >
-                    {Array.from({length: 12}, (_, i) => {
-                      const monthName = new Date(2024, i, 1).toLocaleDateString('es-ES', { month: 'long' })
-                      return <option key={i} value={i}>{monthName}</option>
-                    })}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Año:</label>
-                  <select 
-                    value={selectedYear}
-                    onChange={(e) => {
-                      const year = parseInt(e.target.value)
-                      setSelectedYear(year)
-                      const today = new Date()
-                      const monthDiff = (year - today.getFullYear()) * 12 + (selectedMonth - today.getMonth())
-                      setCalendarPage(monthDiff)
-                    }}
-                  >
-                    {Array.from({length: 5}, (_, i) => {
-                      const year = new Date().getFullYear() - 1 + i
-                      return <option key={year} value={year}>{year}</option>
-                    })}
-                  </select>
-                </div>
-              </div>
-            </div>
-            
-            <div className="filter-group">
-              <label>&nbsp;</label>
-              <button 
-                className="btn-clear-filters"
-                onClick={() => {
-                  setCalendarCabinFilter('all')
-                  setSearchTerm('')
-                  setCalendarPage(0)
-                  setSelectedMonth(new Date().getMonth())
-                  setSelectedYear(new Date().getFullYear())
-                }}
-                title="Limpiar todos los filtros"
-              >
-                <X size={14} /> Limpiar
-              </button>
-            </div>
-            </div>
-          </div>
+          <AgendaFilters 
+            filtersCollapsed={filtersCollapsed}
+            setFiltersCollapsed={setFiltersCollapsed}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            calendarCabinFilter={calendarCabinFilter}
+            setCalendarCabinFilter={setCalendarCabinFilter}
+            selectedMonth={selectedMonth}
+            setSelectedMonth={setSelectedMonth}
+            selectedYear={selectedYear}
+            setSelectedYear={setSelectedYear}
+            setCalendarPage={setCalendarPage}
+            reservations={reservations}
+            onClearFilters={() => {
+              setCalendarCabinFilter('all')
+              setSearchTerm('')
+              setCalendarPage(0)
+              setSelectedMonth(new Date().getMonth())
+              setSelectedYear(new Date().getFullYear())
+            }}
+          />
           
           <div className="export-section">
             <button 
@@ -475,13 +461,15 @@ const Agenda = ({ onStatusUpdate }) => {
         
         {!loading && (
           <CalendarView 
-            reservations={filteredReservations} 
+            reservations={filteredReservations}
+            availability={availability}
             page={calendarPage}
             cabinFilter={calendarCabinFilter}
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}
             onReservationClick={openReservationModal}
             onNewReservation={openNewReservationModal}
+            onAvailabilityClick={handleAvailabilityClick}
           />
         )}
       </div>
@@ -512,293 +500,7 @@ const Agenda = ({ onStatusUpdate }) => {
     </>
   )
 }
-// Componente CalendarView
-const CalendarView = ({ reservations = [], page = 0, cabinFilter = 'all', selectedMonth, selectedYear, onReservationClick, onNewReservation }) => {
-  const today = new Date()
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragStart, setDragStart] = useState(null)
-  const [dragEnd, setDragEnd] = useState(null)
-  const [selectedCabin, setSelectedCabin] = useState('')
-  
-  // Usar mes/año seleccionado o navegación
-  const targetMonth = selectedMonth !== undefined ? selectedMonth : today.getMonth() + page
-  const targetYear = selectedYear !== undefined ? selectedYear : today.getFullYear() + Math.floor(targetMonth / 12)
-  const normalizedMonth = ((targetMonth % 12) + 12) % 12
-  
-  const startDate = new Date(targetYear, normalizedMonth, 1)
-  const endDate = new Date(targetYear, normalizedMonth + 1, 0)
-  
-  const dates = []
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    dates.push(new Date(d))
-  }
-  
-  const { filteredCabins } = useMemo(() => {
-    const all = [...new Set((reservations || []).map(r => r.cabin?.name).filter(Boolean))]
-    const filtered = cabinFilter === 'all' ? all : all.filter(name => name === cabinFilter)
 
-    return { filteredCabins: filtered }
-  }, [reservations, cabinFilter])
-  
-  const cabins = filteredCabins
-  
-  const reservationMap = useMemo(() => {
-    const map = new Map()
-    ;(reservations || []).forEach(r => {
-      if (r.status === 'cancelled') return
-      
-      const checkIn = new Date(r.check_in)
-      const checkOut = new Date(r.check_out)
-      
-      for (let d = new Date(checkIn); d <= checkOut; d.setDate(d.getDate() + 1)) {
-        const key = `${r.cabin?.name}-${d.toISOString().split('T')[0]}`
-        map.set(key, r)
-      }
-    })
-    return map
-  }, [reservations])
-  
-  const getReservationForCabinAndDate = useCallback((cabinName, date) => {
-    const dateStr = date.toISOString().split('T')[0]
-    return reservationMap.get(`${cabinName}-${dateStr}`)
-  }, [reservationMap])
-  
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'confirmed': return '#d4edda'
-      case 'pending': return '#fff3cd'
-      case 'completed': return '#e2d9f3'
-      default: return '#e2e3e5'
-    }
-  }
-  
-  const formatDate = (date) => {
-    const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-    return {
-      day: days[date.getDay()],
-      date: date.getDate(),
-      month: months[date.getMonth()]
-    }
-  }
-
-  const handleStart = (cabinName, dateStr) => {
-    if (dateStr < today.toISOString().split('T')[0]) return
-    setIsDragging(true)
-    setDragStart(dateStr)
-    setDragEnd(dateStr)
-    setSelectedCabin(cabinName)
-  }
-
-  const handleMove = (cabinName, dateStr) => {
-    if (isDragging && cabinName === selectedCabin && dateStr >= today.toISOString().split('T')[0]) {
-      setDragEnd(dateStr)
-    }
-  }
-
-  const handleEnd = () => {
-    if (isDragging && dragStart && dragEnd && selectedCabin) {
-      const startDate = new Date(dragStart)
-      const endDate = new Date(dragEnd)
-      const checkIn = startDate <= endDate ? dragStart : dragEnd
-      const checkOut = startDate <= endDate ? dragEnd : dragStart
-      
-      onNewReservation && onNewReservation(selectedCabin, checkIn, checkOut)
-    }
-    setIsDragging(false)
-    setDragStart(null)
-    setDragEnd(null)
-    setSelectedCabin('')
-  }
-  
-  // Touch events para móvil
-  const handleTouchStart = (cabinName, dateStr) => {
-    handleStart(cabinName, dateStr)
-  }
-  
-  const handleTouchMove = (e) => {
-    if (!isDragging) return
-    
-    const touch = e.touches[0]
-    const element = document.elementFromPoint(touch.clientX, touch.clientY)
-    const cell = element?.closest('.calendar-cell')
-    
-    if (cell) {
-      const cabinName = cell.dataset.cabin
-      const dateStr = cell.dataset.date
-      if (cabinName && dateStr) {
-        handleMove(cabinName, dateStr)
-      }
-    }
-  }
-  
-  const handleTouchEnd = () => {
-    handleEnd()
-  }
-
-  const isInDragRange = (cabinName, dateStr) => {
-    if (!isDragging || cabinName !== selectedCabin || !dragStart || !dragEnd) return false
-    const start = new Date(Math.min(new Date(dragStart), new Date(dragEnd)))
-    const end = new Date(Math.max(new Date(dragStart), new Date(dragEnd)))
-    const current = new Date(dateStr)
-    return current >= start && current <= end
-  }
-  
-  // Forzar recálculo de CSS Grid al montar el componente
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const gridElement = document.querySelector('.calendar-grid')
-      if (gridElement) {
-        gridElement.style.display = 'none'
-        gridElement.offsetHeight // Forzar reflow
-        gridElement.style.display = 'grid'
-        gridElement.style.setProperty('--date-columns', dates.length)
-        gridElement.classList.add('grid-ready')
-      }
-    }, 100)
-    return () => clearTimeout(timer)
-  }, [dates.length])
-  
-  // Touch events no pasivos
-  useEffect(() => {
-    const cells = document.querySelectorAll('.calendar-cell')
-    const handleTouchMoveNonPassive = (e) => {
-      if (isDragging) {
-        e.preventDefault()
-        handleTouchMove(e)
-      }
-    }
-    
-    cells.forEach(cell => {
-      cell.addEventListener('touchmove', handleTouchMoveNonPassive, { passive: false })
-    })
-    
-    return () => {
-      cells.forEach(cell => {
-        cell.removeEventListener('touchmove', handleTouchMoveNonPassive)
-      })
-    }
-  }, [isDragging, handleTouchMove])
-  
-  return (
-    <div className="calendar-view">
-      <div className="calendar-grid" style={{'--date-columns': dates.length}}>
-        <div className="calendar-header">
-          <div className="cabin-header">
-            <span>Cabañas</span>
-          </div>
-          {dates.map(date => {
-            const formatted = formatDate(date)
-            const isToday = date.toISOString().split('T')[0] === today.toISOString().split('T')[0]
-            return (
-              <div key={date.toISOString()} className={`date-header ${isToday ? 'today-header' : ''}`}>
-                <div className="date-day-name">{formatted.day}</div>
-                <div className="date-number">{formatted.date}</div>
-                <div className="date-month">{formatted.month}</div>
-              </div>
-            )
-          })}
-        </div>
-        
-        {cabins.map(cabinName => (
-          <div key={cabinName} className="calendar-row">
-            <div className="cabin-name">{cabinName}</div>
-            {dates.map(date => {
-              const reservation = getReservationForCabinAndDate(cabinName, date)
-              const dateStr = date.toISOString().split('T')[0]
-              const isToday = dateStr === today.toISOString().split('T')[0]
-              
-              let borderClass = ''
-              if (reservation) {
-                const isCheckIn = reservation.check_in === dateStr
-                const isCheckOut = reservation.check_out === dateStr
-                const isMiddle = dateStr > reservation.check_in && dateStr < reservation.check_out
-                
-                if (isCheckIn && isCheckOut) {
-                  borderClass = 'single-day'
-                } else if (isCheckIn) {
-                  borderClass = 'range-start'
-                } else if (isCheckOut) {
-                  borderClass = 'range-end'
-                } else if (isMiddle) {
-                  borderClass = 'range-middle'
-                }
-              }
-              
-              return (
-                <div 
-                  key={date.toISOString()} 
-                  className={`calendar-cell ${
-                    reservation ? 'occupied' : 'available'
-                  } ${isToday ? 'today' : ''} ${borderClass} ${
-                    reservation ? `status-${reservation.status}` : ''
-                  } ${isInDragRange(cabinName, dateStr) ? 'drag-selected' : ''}`}
-                  data-cabin={cabinName}
-                  data-date={dateStr}
-                  onClick={() => reservation && onReservationClick && onReservationClick(reservation)}
-                  onMouseDown={() => !reservation && handleStart(cabinName, dateStr)}
-                  onMouseEnter={() => handleMove(cabinName, dateStr)}
-                  onMouseUp={handleEnd}
-                  onTouchStart={() => !reservation && handleTouchStart(cabinName, dateStr)}
-
-                  onTouchEnd={handleTouchEnd}
-                  style={{ 
-                    cursor: reservation ? 'pointer' : (isDragging ? 'grabbing' : 'grab'),
-                    backgroundColor: reservation ? getStatusColor(reservation.status) : undefined,
-                    userSelect: 'none',
-                    touchAction: 'none'
-                  }}
-                >
-                  {reservation ? (
-                    <div 
-                      className="reservation-info"
-                      title={`${reservation.guest_name || reservation.user?.name || 'Huésped'}
-${reservation.guests} huésped${reservation.guests > 1 ? 'es' : ''}
-${reservation.check_in} - ${reservation.check_out}
-${reservation.includes_breakfast ? 'Con desayunador' : 'Sin desayunador'}
-$${reservation.total_price} (${reservation.payment_status === 'pending' ? 'Sin pagar' : reservation.payment_status === 'paid' ? 'Pagado' : 'Pago parcial'})
-${reservation.guest_phone || reservation.user?.phone || 'Sin teléfono'}`}
-                    >
-                      <div className="guest-name">
-                        {reservation.check_in === dateStr && (
-                          <span className={`payment-dot payment-${reservation.payment_status}`}></span>
-                        )}
-                        {(() => {
-                          const checkIn = new Date(reservation.check_in)
-                          const checkOut = new Date(reservation.check_out)
-                          const totalDays = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24))
-                          const middleDay = Math.floor(totalDays / 2)
-                          const currentDay = Math.ceil((new Date(dateStr) - checkIn) / (1000 * 60 * 60 * 24))
-                          return currentDay === middleDay ? (reservation.guest_name || reservation.user?.name || 'Huésped') : ''
-                        })()}
-                      </div>
-                      <div className="reservation-dates">
-                        {reservation.check_in === dateStr ? 'IN' : ''}
-                        {reservation.check_out === dateStr ? 'OUT' : ''}
-                      </div>
-                    </div>
-                  ) : (
-                    dateStr >= today.toISOString().split('T')[0] && (
-                      <button 
-                        className="add-reservation-btn"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onNewReservation && onNewReservation(cabinName, dateStr)
-                        }}
-                      >
-                        +
-                      </button>
-                    )
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 // Modal de Detalles de Reservación
 const ReservationDetailsModal = ({ reservation, onClose, onStatusUpdate, onWhatsAppContact, setReservations }) => {
@@ -988,23 +690,59 @@ const ReservationDetailsModal = ({ reservation, onClose, onStatusUpdate, onWhats
 
 // Modal de Nueva Reservación
 const NewReservationModal = ({ onClose, onSave, preselectedCabin, preselectedDate, preselectedCheckOut }) => {
+  const [actionType, setActionType] = useState('reservation')
+  
   return (
     <div className="modal-overlay" onClick={onClose}>
     <div className="modal-content" onClick={e => e.stopPropagation()}>
       <div className="modal-header">
-        <h3>Nueva Reservación</h3>
+        <h3>{actionType === 'reservation' ? 'Nueva Reservación' : 'Gestionar Disponibilidad'}</h3>
         <button className="close-btn" onClick={onClose}>
           <X size={20} />
         </button>
       </div>
       <div className="modal-body">
-        <ReservationForm 
-          onClose={onClose} 
-          onSave={onSave}
-          preselectedCabin={preselectedCabin}
-          preselectedDate={preselectedDate}
-          preselectedCheckOut={preselectedCheckOut}
-        />
+        <div className="action-type-selector">
+          <label>Tipo de acción:</label>
+          <div className="radio-group">
+            <label className="radio-option">
+              <input 
+                type="radio" 
+                value="reservation" 
+                checked={actionType === 'reservation'}
+                onChange={(e) => setActionType(e.target.value)}
+              />
+              <span>Nueva Reservación</span>
+            </label>
+            <label className="radio-option">
+              <input 
+                type="radio" 
+                value="availability" 
+                checked={actionType === 'availability'}
+                onChange={(e) => setActionType(e.target.value)}
+              />
+              <span>Gestionar Disponibilidad</span>
+            </label>
+          </div>
+        </div>
+        
+        {actionType === 'reservation' ? (
+          <ReservationForm 
+            onClose={onClose} 
+            onSave={onSave}
+            preselectedCabin={preselectedCabin}
+            preselectedDate={preselectedDate}
+            preselectedCheckOut={preselectedCheckOut}
+          />
+        ) : (
+          <AvailabilityForm 
+            onClose={onClose} 
+            onSave={onSave}
+            preselectedCabin={preselectedCabin}
+            preselectedDate={preselectedDate}
+            preselectedCheckOut={preselectedCheckOut}
+          />
+        )}
       </div>
     </div>
   </div>
@@ -1463,5 +1201,156 @@ const PaymentEditButton = ({ reservation, setReservations, onPaymentUpdate }) =>
   )
 }
 
-export { CalendarView, ReservationDetailsModal, NewReservationModal, ReservationForm, PaymentEditButton }
+// Formulario de Disponibilidad
+const AvailabilityForm = ({ onClose, onSave, preselectedCabin = '', preselectedDate = '', preselectedCheckOut = '' }) => {
+  const [formData, setFormData] = useState({
+    cabin_id: '',
+    start_date: preselectedDate,
+    end_date: preselectedCheckOut || preselectedDate,
+    is_available: false,
+    price_override: ''
+  })
+  const [cabins, setCabins] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const loadCabins = async () => {
+      try {
+        const { cabinsAPI } = await import('../../services/api')
+        const response = await cabinsAPI.getAll()
+        if (response.ok) {
+          setCabins(response.cabins || [])
+          if (preselectedCabin && response.cabins) {
+            const selectedCabin = response.cabins.find(cabin => cabin.name === preselectedCabin)
+            if (selectedCabin) {
+              setFormData(prev => ({ ...prev, cabin_id: selectedCabin.id }))
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error loading cabins:', err)
+      }
+    }
+    loadCabins()
+  }, [preselectedCabin])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      const token = localStorage.getItem('token')
+      const { availabilityAdminAPI } = await import('../../services/availabilityService')
+      
+      const response = await availabilityAdminAPI.setBulkAvailability({
+        ...formData,
+        price_override: formData.price_override ? parseFloat(formData.price_override) : null
+      }, token)
+      
+      if (response.ok) {
+        await Swal.fire({
+          title: '¡Éxito!',
+          text: response.msg,
+          icon: 'success',
+          confirmButtonColor: '#2c5530',
+          timer: 2000
+        })
+        onSave()
+      } else {
+        Swal.fire({
+          title: 'Error',
+          text: response.msg || 'Error al gestionar disponibilidad',
+          icon: 'error',
+          confirmButtonColor: '#2c5530'
+        })
+      }
+    } catch (err) {
+      Swal.fire({
+        title: 'Error',
+        text: 'Ocurrió un error al gestionar disponibilidad',
+        icon: 'error',
+        confirmButtonColor: '#2c5530'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="availability-form">
+      <div className="form-group">
+        <label>Cabaña</label>
+        <select 
+          value={formData.cabin_id}
+          onChange={(e) => setFormData({...formData, cabin_id: e.target.value})}
+          required
+        >
+          <option value="">Seleccionar cabaña</option>
+          {cabins.map(cabin => (
+            <option key={cabin.id} value={cabin.id}>{cabin.name}</option>
+          ))}
+        </select>
+      </div>
+      
+      <div className="form-row">
+        <div className="form-group">
+          <label>Fecha inicio</label>
+          <input 
+            type="date"
+            value={formData.start_date}
+            onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+            required
+          />
+        </div>
+        <div className="form-group">
+          <label>Fecha fin</label>
+          <input 
+            type="date"
+            value={formData.end_date}
+            onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+            required
+          />
+        </div>
+      </div>
+      
+      <div className="form-group">
+        <label>Estado</label>
+        <select 
+          value={formData.is_available}
+          onChange={(e) => setFormData({...formData, is_available: e.target.value === 'true'})}
+        >
+          <option value={false}>Bloquear (No disponible)</option>
+          <option value={true}>Habilitar (Disponible)</option>
+        </select>
+      </div>
+      
+      {formData.is_available && (
+        <div className="form-group">
+          <label>Precio especial (opcional)</label>
+          <input 
+            type="number"
+            step="0.01"
+            placeholder="Dejar vacío para usar precio normal"
+            value={formData.price_override}
+            onChange={(e) => setFormData({...formData, price_override: e.target.value})}
+          />
+        </div>
+      )}
+      
+
+      
+      <div className="form-actions">
+        <button type="button" className="btn-secondary" onClick={onClose}>
+          Cancelar
+        </button>
+        <button type="submit" className="btn-primary" disabled={loading}>
+          {loading && <div className="button-spinner"></div>}
+          {loading ? 'Guardando...' : 'Guardar'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+export { ReservationDetailsModal, NewReservationModal, ReservationForm, PaymentEditButton, AvailabilityForm }
 export default Agenda

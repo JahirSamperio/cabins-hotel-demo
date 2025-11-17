@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { 
   DollarSign, TrendingUp, TrendingDown, Calendar,
   Users, CreditCard, AlertTriangle, CheckCircle,
   Clock, BarChart3, PieChart, MessageCircle, Download
 } from 'lucide-react'
 import './FinancialDashboard.css'
+import '../../styles/AdminDesignSystem.css'
 
 const FinancialDashboard = () => {
   const [summary, setSummary] = useState({})
@@ -138,12 +139,15 @@ const FinancialDashboard = () => {
     }
   }
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-MX', {
+  // Memoizar formateador de moneda
+  const currencyFormatter = useMemo(() => 
+    new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN'
-    }).format(amount || 0)
-  }
+    }), []
+  )
+
+  const formatCurrency = (amount) => currencyFormatter.format(amount || 0)
 
   const getPaymentStatusColor = (paid, total) => {
     const percentage = (paid / total) * 100
@@ -276,7 +280,7 @@ const FinancialDashboard = () => {
   return (
     <div className="financial-section">
       <div className="financial-header">
-        <h3>Dashboard Financiero</h3>
+        <h3 className="admin-section-title">Dashboard Financiero</h3>
         <div className="financial-controls">
           <div className="date-range">
             <input
